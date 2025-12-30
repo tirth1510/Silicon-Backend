@@ -4,6 +4,7 @@ import cookieParser from "cookie-parser";
 import morgan from "morgan";
 import dotenv from "dotenv";
 import demoRoutes from "./routes/demo.routes.js";
+import accessorizeRoutes from "./routes/accessorize.routes.js";
 
 dotenv.config();
 
@@ -26,5 +27,6 @@ app.get("/", (req, res) => res.send("Welcome to the API"));
 
 // Demo routes
 app.use("/api/demo", demoRoutes);
+app.use("/api/accesories", accessorizeRoutes);
 
 export default app;
