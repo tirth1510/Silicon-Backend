@@ -59,35 +59,34 @@ export const getAllProducts = async (req, res) => {
   try {
     const products = await getAllProductsService();
 
-    return res
-  .status(200)
-  .set("Content-Type", "application/json")
-  .send(
-    JSON.stringify(
-      {
-        success: true,
-        count: products.length,
-        products: products.map((p) => ({
-          id: p._id,
-          productCategory: p.productCategory,
-          productTitle: p.productTitle,
-          description: p.description,
-          price: p.priceDetails?.price,
-          discount: p.priceDetails?.discount,
-          stock: p.stock,
-          productImages: p.productImageUrl,
-          galleryImages: p.productGallery,
-          specifications: p.specifications,
-          warranty: p.warranty,
-          createdAt: p.createdAt,
-          updatedAt: p.updatedAt,
-        })),
-      },
-      null,
-      2 // 👈 THIS forces new line per key
-    )
-  );
+    const mappedProducts = products.map((p) => {
+      const price = p.priceDetails?.price ?? 0;
+      const discount = p.priceDetails?.discount ?? 0;
+      const finalPrice = Math.round(price - (price * discount) / 100);
 
+      return {
+        id: p._id,
+        productCategory: p.productCategory,
+        productTitle: p.productTitle,
+        description: p.description,
+        price,                // original price
+        discount,             // discount %
+        finalPrice,           // computed final price
+        stock: p.stock,
+        productImages: p.productImageUrl,
+        galleryImages: p.productGallery,
+        specifications: p.specifications,
+        warranty: p.warranty,
+        createdAt: p.createdAt,
+        updatedAt: p.updatedAt,
+      };
+    });
+
+    return res.status(200).json({
+      success: true,
+      count: products.length,
+      products: mappedProducts,
+    });
   } catch (error) {
     return res.status(500).json({
       success: false,
@@ -95,6 +94,7 @@ export const getAllProducts = async (req, res) => {
     });
   }
 };
+
 
 
 export const getAccessoryById = async (req, res) => {

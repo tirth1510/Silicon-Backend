@@ -5,6 +5,7 @@ import morgan from "morgan";
 import dotenv from "dotenv";
 import demoRoutes from "./routes/demo.routes.js";
 import accessorizeRoutes from "./routes/accessorize.routes.js";
+import contactRoutes from "./routes/contect.routes.js"
 
 dotenv.config();
 
@@ -25,6 +26,7 @@ app.use(morgan("dev"));
 app.get("/", (req, res) => res.send("Welcome to the API"));
 
 app.use("/api/demo", demoRoutes);
+app.use("/api/contact", contactRoutes)
 app.use("/api/accessorize", accessorizeRoutes);
 
 

@@ -93,3 +93,4 @@ export const validateUpdateProduct = (req, res, next) => {
 
   next();
 };
+

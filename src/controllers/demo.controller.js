@@ -9,6 +9,9 @@ import {
   updateModelService,
   updateModelDetailsService,
   updateColorDetailsService,
+  getProductSellService,
+  getProductByModelIdService,
+  getProductsBySchemeService
 } from "../services/product.service.js";
 import { Demo } from "../models/demo.model.js";
 import cloudinary from "../config/cloudinary.js";
@@ -236,6 +239,90 @@ export const getPaddingModelsController = async (req, res) => {
   }
 };
 
+
+
+
+
+export const getProductSellController = async (req, res) => {
+  try {
+
+    const data = await getProductSellService();
+
+     return res.status(200).json({
+      success: true,
+      count: data.length,
+      data,
+    });
+  } catch (err) {
+    return res.status(500).json({
+      success: false,
+      message: err.message,
+    });
+  }
+};
+
+
+export const getProductByModelIdController = async (req, res) => {
+  try {
+    const { modelId } = req.params;
+
+    if (!modelId) {
+      return res.status(400).json({ success: false, message: "Model ID is required" });
+    }
+
+    const productData = await getProductByModelIdService(modelId);
+
+    if (!productData) {
+      return res.status(404).json({ success: false, message: "Product not found" });
+    }
+
+    return res.status(200).json({ success: true, data: productData });
+  } catch (err) {
+    return res.status(500).json({ success: false, message: err.message });
+  }
+};
+
+
+export const getProductsByScheme = async (req, res) => {
+  try {
+    const { scheme } = req.params;
+
+    const allowedSchemes = [
+      "saleProduct",
+      "tradingProduct",
+      "companyProduct",
+      "valuableProduct",
+      "recommendedProduct",
+    ];
+
+    if (!allowedSchemes.includes(scheme)) {
+      return res.status(400).json({
+        success: false,
+        message: "Invalid scheme type",
+      });
+    }
+
+    const data = await getProductsBySchemeService(scheme);
+
+    res.status(200).json({
+      success: true,
+      count: data.length,
+      data,
+    });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({
+      success: false,
+      message: "Server error",
+    });
+  }
+};
+
+
+
+
+
+
 // -- --- ----  Update Oprations
 
 export const updateProductController = async (req, res) => {
@@ -324,3 +411,26 @@ export const updateColorDetailsController = async (req, res) => {
     });
   }
 };
+
+
+
+export const updateProductSellController = async (req, res) => {
+  try {
+    const { productId, modelId } = req.params;
+    const updateData = req.body; // expected: { saleProduct: true, tradingProduct: true, ... }
+
+    const updatedSchem = await updateProductSellService(productId, modelId, updateData);
+
+    return res.status(200).json({
+      success: true,
+      message: "Product sell flags updated successfully",
+      data: updatedSchem,
+    });
+  } catch (err) {
+    return res.status(500).json({
+      success: false,
+      message: err.message,
+    });
+  }
+};
+

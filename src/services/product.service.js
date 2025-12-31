@@ -182,6 +182,113 @@ export const getPaddingModelsService = async () => {
   return result;
 };
 
+
+export const getProductSellService = async () => {
+  const products = await Demo.find(
+    {},
+    {
+      productTitle: 1,
+      productCategory: 1,
+      productModels: 1,
+    }
+  ).lean();
+
+  const result = [];
+
+  for (const product of products) {
+    for (const model of product.productModels) {
+      // Only include models with status "Live"
+      if (model.status === "Live" && model.productModelDetails.schem.saleProduct === true) {
+        result.push({
+          productId: product._id,
+          productTitle: product.productTitle,
+          productCategory: product.productCategory,
+          modelId: model._id,
+          modelName: model.modelName,
+          status: model.status,
+          productModelDetails: model.productModelDetails || null,
+        });
+      }
+    }
+  }
+
+  return result;
+};
+
+
+
+export const getProductByModelIdService = async (modelId) => {
+  const product = await Demo.findOne(
+    { "productModels._id": modelId },
+    { productTitle: 1, description: 1, productModels: 1 }
+  ).lean();
+
+  if (!product) return null;
+
+  // find the specific model details
+  const model = product.productModels.find((m) => m._id.toString() === modelId);
+
+  return {
+    productId: product._id,
+    productTitle: product.productTitle,
+    description: product.description,
+    modelId: model._id,
+    modelName: model.modelName,
+    status: model.status,
+    productModelDetails: model.productModelDetails || null,
+  };
+};
+
+
+export const getProductsBySchemeService = async (schemeKey) => {
+  const products = await Demo.find(
+    {},
+    {
+      productTitle: 1,
+      productCategory: 1,
+      description: 1,
+      productModels: 1,
+    }
+  ).lean();
+
+  const result = [];
+
+  for (const product of products) {
+    const matchedModels = [];
+
+    for (const model of product.productModels || []) {
+      const schem = model.productModelDetails?.schem;
+
+      if (
+        model.status === "Live" &&
+        schem?.[schemeKey] === true
+      ) {
+        matchedModels.push({
+          modelId: model._id,
+          modelName: model.modelName,
+          status: model.status,
+          productModelDetails: model.productModelDetails ?? {},
+        });
+      }
+    }
+
+    // ⛔ DO NOT push empty products
+    if (matchedModels.length > 0) {
+      result.push({
+        productId: product._id,
+        productTitle: product.productTitle,
+        productCategory: product.productCategory,
+        description: product.description,
+        models: matchedModels,
+      });
+    }
+  }
+
+  return result;
+};
+
+
+
 // --- -- -- -  update oprations
 
 export const updateProductService = async (productId, payload) => {
@@ -357,3 +464,44 @@ export const updateColorDetailsService = async (
 
   return updatedColor;
 };
+
+
+
+
+/**
+ * Update product sell flags for a specific model of a product
+ * @param {string} productId 
+ * @param {string} modelId 
+ * @param {object} updateData - Keys like saleProduct, tradingProduct, etc.
+ * @returns {object} updated schem
+ */
+export const updateProductSellService = async (productId, modelId, updateData) => {
+  const product = await Demo.findById(productId);
+  if (!product) throw new Error("Product not found");
+
+  const model = product.productModels.id(modelId);
+  if (!model) throw new Error("Model not found");
+
+  // Initialize if missing
+  if (!model.productModelDetails) model.productModelDetails = {};
+  if (!model.productModelDetails.schem) model.productModelDetails.schem = {};
+
+  // Merge updates
+  model.productModelDetails.schem = {
+    ...model.productModelDetails.schem.toObject(),
+    ...updateData,
+  };
+
+  await product.save();
+  return model.productModelDetails.schem;
+};
+
+
+
+/**
+ * Get the product sell flags for a specific model
+ * @param {string} productId
+ * @param {string} modelId
+ * @returns {object} schem object
+ */
+

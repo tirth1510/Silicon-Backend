@@ -11,15 +11,17 @@ import {
   updateProductController,
   updateModelController,
   updateModelDetailsController,
-  updateColorDetailsController
-
+  updateColorDetailsController,
+  updateProductSellController,
+  getProductSellController,
+  getProductByModelIdController,
+  getProductsByScheme
 } from "../controllers/demo.controller.js";
 import {
   validateCreateProductStep1,
   validateProductModelFeatures,
   validateAddProductModel,
   validateUpdateProduct,
-  
 } from "../validations/product.validation.js";
 
 const router = express.Router();
@@ -61,6 +63,12 @@ router.get("/products-with-models", getAllProductsWithModelsController);
 
 router.get("/products/models/padding", getPaddingModelsController);
 
+router.get("/limetedtimedeal/sell", getProductSellController);
+
+router.get("/model/:modelId", getProductByModelIdController);
+
+router.get("/scheme/:scheme", getProductsByScheme);
+
 //   --- - ----  Update Api
 
 router.put(
@@ -83,5 +91,8 @@ router.put(
   "/products/:productId/models/:modelId/colors/:colorId/details",
   updateColorDetailsController
 );
+
+router.patch("/:productId/:modelId/sell", updateProductSellController);
+
 
 export default router;

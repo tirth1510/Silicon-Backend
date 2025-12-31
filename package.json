@@ -27,6 +27,7 @@
     "multer": "^2.0.2",
     "multer-storage-cloudinary": "^2.2.1",
     "nodemailer": "^7.0.12",
+    "uuid": "^13.0.0",
     "zod": "^4.2.1"
   },
   "devDependencies": {
