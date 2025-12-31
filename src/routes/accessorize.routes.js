@@ -1,30 +1,44 @@
 import express from "express";
 import multer from "multer";
-import { createProduct , getAllProducts , getAccessoryById, createBulkProducts} from "../controllers/accessorize.controller.js";
+import {
+  createProduct,
+  getAllProducts,
+  getAccessoryById,
+  createBulkProducts,
+} from "../controllers/accessorize.controller.js";
 
 const router = express.Router();
 
-const storage = multer.diskStorage({});
-const upload = multer({ storage });
-
+/**
+ * ✅ MUST use memoryStorage
+ * Required for Cloudinary buffer streaming
+ */
+const upload = multer({
+  storage: multer.memoryStorage(),
+  limits: {
+    fileSize: 5 * 1024 * 1024, // 5MB per image
+  },
+});
 
 router.post(
   "/create",
   upload.fields([
     { name: "productImages", maxCount: 5 },
-    { name: "galleryImages", maxCount: 10 }
+    { name: "galleryImages", maxCount: 10 },
   ]),
   createProduct
 );
+router.get("/all", getAllProducts);
+
 router.post(
   "/create/bulk",
   upload.fields([
     { name: "productImages", maxCount: 5 },
-    { name: "galleryImages", maxCount: 10 }
+    { name: "galleryImages", maxCount: 10 },
   ]),
   createBulkProducts
 );
 
-router.get("/all", getAllProducts);
 router.get("/:id", getAccessoryById);
-export default router
+
+export default router;

@@ -1,5 +1,5 @@
 import { Accessorize } from "../models/accessorize.model.js";
-import { uploadImages } from "../utils/cloudinaryUpload.js";
+import { uploadImages } from "../utils/uploadToCloudinary.js";
 
 export const createProductService = async (data, files) => {
   const {
@@ -108,8 +108,9 @@ export const createBulkProductService = async (data, files) => {
 };
 
 export const getAllProductsService = () => {
-  return Accessorize.find({});
+  return Accessorize.find({}).lean();
 };
+
 
 export const getProductByIdService = (id) => {
   return Accessorize.findById(id);

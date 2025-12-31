@@ -22,11 +22,10 @@ app.use(
 app.use(cookieParser());
 app.use(morgan("dev"));
 
-// Test route
 app.get("/", (req, res) => res.send("Welcome to the API"));
 
-// Demo routes
 app.use("/api/demo", demoRoutes);
-app.use("/api/accesories", accessorizeRoutes);
+app.use("/api/accessorize", accessorizeRoutes);
+
 
 export default app;
