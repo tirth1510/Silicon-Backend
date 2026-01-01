@@ -108,9 +108,8 @@ export const createBulkProductService = async (data, files) => {
 };
 
 export const getAllProductsService = () => {
-  return Accessorize.find({}).lean();
+  return Accessorize.find({ status: "Live" }).lean();
 };
-
 
 export const getProductByIdService = (id) => {
   return Accessorize.findById(id);

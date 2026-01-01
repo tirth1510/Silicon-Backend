@@ -69,6 +69,7 @@ export const getAllProducts = async (req, res) => {
         productCategory: p.productCategory,
         productTitle: p.productTitle,
         description: p.description,
+        status: p.status,
         price,                // original price
         discount,             // discount %
         finalPrice,           // computed final price
@@ -76,6 +77,7 @@ export const getAllProducts = async (req, res) => {
         productImages: p.productImageUrl,
         galleryImages: p.productGallery,
         specifications: p.specifications,
+        productSpecifications : p.productSpecifications,
         warranty: p.warranty,
         createdAt: p.createdAt,
         updatedAt: p.updatedAt,

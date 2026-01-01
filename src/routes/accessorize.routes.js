@@ -7,6 +7,8 @@ import {
   createBulkProducts,
 } from "../controllers/accessorize.controller.js";
 
+import {updateProductSpecificationsController} from "../controllers/try.controller.js"
+
 const router = express.Router();
 
 /**
@@ -41,4 +43,6 @@ router.post(
 
 router.get("/:id", getAccessoryById);
 
+
+router.post("/update/productSpecifications", updateProductSpecificationsController);
 export default router;

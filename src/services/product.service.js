@@ -225,8 +225,16 @@ export const getProductByModelIdService = async (modelId) => {
 
   if (!product) return null;
 
-  // find the specific model details
+  // Find the specific model details
   const model = product.productModels.find((m) => m._id.toString() === modelId);
+
+  if (!model) return null;
+
+  // Map all models of this product to only include modelId and modelName
+  const allModels = product.productModels.map((m) => ({
+    modelId: m._id,
+    modelName: m.modelName,
+  }));
 
   return {
     productId: product._id,
@@ -236,8 +244,10 @@ export const getProductByModelIdService = async (modelId) => {
     modelName: model.modelName,
     status: model.status,
     productModelDetails: model.productModelDetails || null,
+    allModels, // <<< new field: list of all models under this product
   };
 };
+
 
 
 export const getProductsBySchemeService = async (schemeKey) => {
