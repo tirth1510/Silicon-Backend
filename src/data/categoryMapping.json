@@ -1,0 +1,76 @@
+{
+  "categories": [
+    {
+      "categoryId": 0,
+      "categoryName": "Operating Theatre & Emergency Equipment",
+      "categorySlug": "operating-theatre-emergency-equipment",
+      "description": "Advanced equipment for surgical theaters and emergency medical response",
+      "icon": "surgical",
+      "displayOrder": 0,
+      "isActive": true,
+      "metadata": {
+        "productCount": 0,
+        "createdBy": "system",
+        "lastModifiedBy": "system"
+      }
+    },
+    {
+      "categoryId": 1,
+      "categoryName": "Patient Monitoring & Diagnostics",
+      "categorySlug": "patient-monitoring-diagnostics",
+      "description": "Comprehensive patient monitoring systems and diagnostic equipment",
+      "icon": "monitor-heart",
+      "displayOrder": 1,
+      "isActive": true,
+      "metadata": {
+        "productCount": 0,
+        "createdBy": "system",
+        "lastModifiedBy": "system"
+      }
+    },
+    {
+      "categoryId": 2,
+      "categoryName": "Respiratory & Oxygen Therapy",
+      "categorySlug": "respiratory-oxygen-therapy",
+      "description": "Respiratory care and oxygen therapy equipment",
+      "icon": "lungs",
+      "displayOrder": 2,
+      "isActive": true,
+      "metadata": {
+        "productCount": 0,
+        "createdBy": "system",
+        "lastModifiedBy": "system"
+      }
+    },
+    {
+      "categoryId": 3,
+      "categoryName": "Suction & Infusion Systems",
+      "categorySlug": "suction-infusion-systems",
+      "description": "Medical suction and infusion equipment",
+      "icon": "droplet",
+      "displayOrder": 3,
+      "isActive": true,
+      "metadata": {
+        "productCount": 0,
+        "createdBy": "system",
+        "lastModifiedBy": "system"
+      }
+    },
+    {
+      "categoryId": 4,
+      "categoryName": "Obstetric & Fetal Care",
+      "categorySlug": "obstetric-fetal-care",
+      "description": "Equipment for maternal and fetal monitoring and care",
+      "icon": "baby",
+      "displayOrder": 4,
+      "isActive": true,
+      "metadata": {
+        "productCount": 0,
+        "createdBy": "system",
+        "lastModifiedBy": "system"
+      }
+    }
+  ],
+  "productMapping": {}
+}
+

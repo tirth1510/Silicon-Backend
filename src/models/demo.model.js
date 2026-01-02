@@ -182,7 +182,6 @@ const productSchema = new mongoose.Schema(
   {
     productCategory: {
       type: String,
-      enum: ["1", "2", "3", "4"],
       required: true,
     },
     productTitle: {
