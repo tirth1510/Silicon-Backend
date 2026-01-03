@@ -1,10 +1,10 @@
 import express from "express";
 import multer from "multer";
+
 import {
   createProductStep1,
   addProductModelDetails,
   addColorToModel,
-  updateProductModelFeaturesController,
   addProductModelController,
   getAllProductsWithModelsController,
   getPaddingModelsController,
@@ -15,8 +15,11 @@ import {
   updateProductSellController,
   getProductSellController,
   getProductByModelIdController,
-  getProductsByScheme
+  updateColorBySection,
+  getProductsByScheme,
+  deleteModelController,
 } from "../controllers/demo.controller.js";
+
 import {
   validateCreateProductStep1,
   validateProductModelFeatures,
@@ -26,14 +29,28 @@ import {
 
 const router = express.Router();
 
+/* ---------------- Multer ---------------- */
 const storage = multer.memoryStorage();
-export const upload = multer({ storage });
+const upload = multer({ storage });
 
-//      -- -- --   create oprrations -- -- --
+/* ---------------- CREATE ---------------- */
 
-router.post("/create/step-1", validateCreateProductStep1, createProductStep1);
+router.post(
+  "/products",
+  validateCreateProductStep1,
+  createProductStep1
+);
 
-router.put("/:productId/models/:modelId/details", addProductModelDetails);
+router.post(
+  "/products/:productId/models",
+  validateAddProductModel,
+  addProductModelController
+);
+
+router.put(
+  "/products/:productId/models/:modelId/details",
+  addProductModelDetails
+);
 
 router.post(
   "/products/:productId/models/:modelId/colors",
@@ -45,31 +62,34 @@ router.post(
   addColorToModel
 );
 
-router.put(
-  "/products/:productId/models/:modelId/features",
-  validateProductModelFeatures,
-  updateProductModelFeaturesController
+/* ---------------- READ ---------------- */
+
+router.get(
+  "/products-with-models",
+  getAllProductsWithModelsController
 );
 
-router.post(
-  "/products/:productId/models",
-  validateAddProductModel,
-  addProductModelController
+router.get(
+  "/products/models/padding",
+  getPaddingModelsController
 );
 
-// ----  ----  Read Opration
+router.get(
+  "/limetedtimedeal/sell",
+  getProductSellController
+);
 
-router.get("/products-with-models", getAllProductsWithModelsController);
+router.get(
+  "/products/model/:modelId",
+  getProductByModelIdController
+);
 
-router.get("/products/models/padding", getPaddingModelsController);
+router.get(
+  "/products/scheme/:scheme",
+  getProductsByScheme
+);
 
-router.get("/limetedtimedeal/sell", getProductSellController);
-
-router.get("/model/:modelId", getProductByModelIdController);
-
-router.get("/scheme/:scheme", getProductsByScheme);
-
-//   --- - ----  Update Api
+/* ---------------- UPDATE ---------------- */
 
 router.put(
   "/products/:productId",
@@ -78,21 +98,33 @@ router.put(
 );
 
 router.put(
-  "/products/update/:productId/models/:modelId",
+  "/products/:productId/models/:modelId",
   updateModelController
 );
 
 router.put(
-  "/products/update/:productId/models/:modelId/details",
+  "/products/:productId/models/:modelId/details/:section",
   updateModelDetailsController
 );
 
 router.put(
-  "/products/:productId/models/:modelId/colors/:colorId/details",
+  "/products/:productId/models/:modelId/colors/:colorId",
   updateColorDetailsController
 );
 
-router.patch("/:productId/:modelId/sell", updateProductSellController);
+router.patch(
+  "/products/:productId/models/:modelId/sell",
+  updateProductSellController
+);
 
+
+router.put(
+  "/products/:productId/models/:modelId/colors/:colorId/:section",
+  upload.any(), // Accept any uploaded images (single or multiple)
+  updateColorBySection
+);
+
+
+router.delete("/products/delete/:productId/models/:modelId", deleteModelController);
 
 export default router;

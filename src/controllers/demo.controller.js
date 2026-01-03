@@ -1,3 +1,5 @@
+import mongoose from "mongoose";
+
 import {
   createProductStep1Service,
   addProductModelDetailsService,
@@ -11,7 +13,8 @@ import {
   updateColorDetailsService,
   getProductSellService,
   getProductByModelIdService,
-  getProductsBySchemeService
+  getProductsBySchemeService,
+  updateProductSellService,
 } from "../services/product.service.js";
 import { Demo } from "../models/demo.model.js";
 import cloudinary from "../config/cloudinary.js";
@@ -181,8 +184,6 @@ export const updateProductModelFeaturesController = async (req, res) => {
   }
 };
 
-
-
 // create model
 export const addProductModelController = async (req, res) => {
   try {
@@ -239,16 +240,11 @@ export const getPaddingModelsController = async (req, res) => {
   }
 };
 
-
-
-
-
 export const getProductSellController = async (req, res) => {
   try {
-
     const data = await getProductSellService();
 
-     return res.status(200).json({
+    return res.status(200).json({
       success: true,
       count: data.length,
       data,
@@ -261,19 +257,22 @@ export const getProductSellController = async (req, res) => {
   }
 };
 
-
 export const getProductByModelIdController = async (req, res) => {
   try {
     const { modelId } = req.params;
 
     if (!modelId) {
-      return res.status(400).json({ success: false, message: "Model ID is required" });
+      return res
+        .status(400)
+        .json({ success: false, message: "Model ID is required" });
     }
 
     const productData = await getProductByModelIdService(modelId);
 
     if (!productData) {
-      return res.status(404).json({ success: false, message: "Product not found" });
+      return res
+        .status(404)
+        .json({ success: false, message: "Product not found" });
     }
 
     return res.status(200).json({ success: true, data: productData });
@@ -282,7 +281,7 @@ export const getProductByModelIdController = async (req, res) => {
   }
 };
 
-
+// controllers/productController.js
 export const getProductsByScheme = async (req, res) => {
   try {
     const { scheme } = req.params;
@@ -293,6 +292,7 @@ export const getProductsByScheme = async (req, res) => {
       "companyProduct",
       "valuableProduct",
       "recommendedProduct",
+      "all",
     ];
 
     if (!allowedSchemes.includes(scheme)) {
@@ -302,7 +302,94 @@ export const getProductsByScheme = async (req, res) => {
       });
     }
 
-    const data = await getProductsBySchemeService(scheme);
+    let data = [];
+
+    const ALL_SCHEMES = [
+      "saleProduct",
+      "tradingProduct",
+      "companyProduct",
+      "valuableProduct",
+      "recommendedProduct",
+    ];
+
+    if (scheme === "all") {
+      // fetch all schemes and merge
+      const results = await Promise.all(
+        ALL_SCHEMES.map((s) => getProductsBySchemeService(s))
+      );
+
+      const productMap = new Map();
+
+      results.flat().forEach((product) => {
+        if (!productMap.has(product.productId)) {
+          const modelsWithAllSchemes = product.models.map((model) => ({
+            ...model,
+            productModelDetails: {
+              ...model.productModelDetails,
+              schem: ALL_SCHEMES.reduce((acc, key) => {
+                acc[key] = !!model.productModelDetails.schem?.[key];
+                return acc;
+              }, {}),
+            },
+          }));
+
+          productMap.set(product.productId, {
+            ...product,
+            models: modelsWithAllSchemes,
+          });
+        } else {
+          const existing = productMap.get(product.productId);
+          product.models.forEach((model) => {
+            const exModel = existing.models.find(
+              (m) => m.modelId === model.modelId
+            );
+
+            if (exModel) {
+              exModel.productModelDetails.schem = ALL_SCHEMES.reduce(
+                (acc, key) => {
+                  acc[key] =
+                    !!exModel.productModelDetails.schem[key] ||
+                    !!model.productModelDetails.schem?.[key];
+                  return acc;
+                },
+                {}
+              );
+            } else {
+              existing.models.push({
+                ...model,
+                productModelDetails: {
+                  ...model.productModelDetails,
+                  schem: ALL_SCHEMES.reduce((acc, key) => {
+                    acc[key] = !!model.productModelDetails.schem?.[key];
+                    return acc;
+                  }, {}),
+                },
+              });
+            }
+          });
+        }
+      });
+
+      data = Array.from(productMap.values());
+    } else {
+      // specific scheme
+      data = await getProductsBySchemeService(scheme);
+
+      // ensure all models have all scheme keys
+      data = data.map((product) => ({
+        ...product,
+        models: product.models.map((model) => ({
+          ...model,
+          productModelDetails: {
+            ...model.productModelDetails,
+            schem: ALL_SCHEMES.reduce((acc, key) => {
+              acc[key] = !!model.productModelDetails.schem?.[key];
+              return acc;
+            }, {}),
+          },
+        })),
+      }));
+    }
 
     res.status(200).json({
       success: true,
@@ -317,11 +404,6 @@ export const getProductsByScheme = async (req, res) => {
     });
   }
 };
-
-
-
-
-
 
 // -- --- ----  Update Oprations
 
@@ -365,22 +447,22 @@ export const updateModelController = async (req, res) => {
 
 export const updateModelDetailsController = async (req, res) => {
   try {
-    const { productId, modelId } = req.params;
-    const payload = req.body;
+    const { productId, modelId, section } = req.params;
 
     const updatedModel = await updateModelDetailsService(
       productId,
       modelId,
-      payload
+      section,
+      req.body
     );
 
-    return res.status(200).json({
+    res.status(200).json({
       success: true,
-      message: "Model details updated successfully",
+      message: `${section} updated successfully`,
       data: updatedModel,
     });
   } catch (error) {
-    return res.status(400).json({
+    res.status(400).json({
       success: false,
       message: error.message,
     });
@@ -412,14 +494,183 @@ export const updateColorDetailsController = async (req, res) => {
   }
 };
 
+export const updateColorBySection = async (req, res) => {
+  try {
+    const { productId, modelId, colorId, section } = req.params;
+    const {
+      index,
+      deleteIndexes,
+      colorName,
+      stock,
+      price,
+      discount,
+      mainImage,
+      productImages,
+      galleryImages,
+    } = req.body;
 
+    if (!mongoose.Types.ObjectId.isValid(productId))
+      return res
+        .status(400)
+        .json({ success: false, message: "Invalid productId" });
+
+    const query = {
+      _id: productId,
+      "productModels._id": modelId,
+      "productModels.colors._id": colorId,
+    };
+
+    const arrayFilters = [{ "m._id": modelId }, { "c._id": colorId }];
+
+    let update = {};
+    let uploadedUrls = [];
+
+    // ---------------- Upload files if any ----------------
+    if (req.files && Object.keys(req.files).length > 0) {
+      const files = Object.values(req.files).flat();
+      for (const file of files) {
+        const uploaded = await uploadToCloudinary(
+          file.buffer,
+          "products/colors"
+        );
+        uploadedUrls.push(uploaded.secure_url);
+      }
+    } else if (req.file) {
+      const uploaded = await uploadToCloudinary(
+        req.file.buffer,
+        "products/colors"
+      );
+      uploadedUrls.push(uploaded.secure_url);
+    }
+
+    switch (section) {
+      // ---------------- Color metadata ----------------
+      case "details":
+        const detailsUpdate = {};
+        if (colorName !== undefined)
+          detailsUpdate["productModels.$[m].colors.$[c].colorName"] = colorName;
+        if (stock !== undefined)
+          detailsUpdate["productModels.$[m].colors.$[c].stock"] = Number(stock);
+        if (price !== undefined)
+          detailsUpdate["productModels.$[m].colors.$[c].colorPrice.0.price"] =
+            Number(price);
+        if (discount !== undefined)
+          detailsUpdate[
+            "productModels.$[m].colors.$[c].colorPrice.0.discount"
+          ] = Number(discount);
+
+        if (Object.keys(detailsUpdate).length === 0)
+          return res
+            .status(400)
+            .json({ success: false, message: "No details provided to update" });
+
+        update = { $set: detailsUpdate };
+        break;
+
+      // ---------------- Images ----------------
+      case "images":
+        if (!uploadedUrls.length && !deleteIndexes && index === undefined)
+          return res
+            .status(400)
+            .json({
+              success: false,
+              message: "Image(s) required or deleteIndexes or index",
+            });
+
+        update = { $set: {}, $push: {} };
+
+        // Fetch current color data
+        const product = await Demo.findOne(query).lean();
+        const color = product.productModels
+          .find((m) => m._id.toString() === modelId)
+          .colors.find((c) => c._id.toString() === colorId);
+
+        // ---------------- Main Image ----------------
+        if (mainImage && uploadedUrls.length) {
+          update["productModels.$[m].colors.$[c].imageUrl"] = uploadedUrls[0];
+        }
+
+        // ---------------- Product Images ----------------
+        if (productImages) {
+          let images = color.productImageUrl || [];
+
+          if (deleteIndexes?.length) {
+            deleteIndexes
+              .sort((a, b) => b - a)
+              .forEach((i) => {
+                if (i >= 0 && i < images.length) images.splice(i, 1);
+              });
+          }
+
+          if (index !== undefined) {
+            uploadedUrls.forEach((url, i) => {
+              images[index + i] = { url };
+            });
+          }
+
+          if (!index && (!deleteIndexes || !deleteIndexes.length)) {
+            images.push(...uploadedUrls.map((url) => ({ url })));
+          }
+
+          update["productModels.$[m].colors.$[c].productImageUrl"] = images;
+        }
+
+        // ---------------- Gallery Images ----------------
+        if (galleryImages) {
+          let gallery = color.productGallery || [];
+
+          if (deleteIndexes?.length) {
+            deleteIndexes
+              .sort((a, b) => b - a)
+              .forEach((i) => {
+                if (i >= 0 && i < gallery.length) gallery.splice(i, 1);
+              });
+          }
+
+          if (index !== undefined) {
+            uploadedUrls.forEach((url, i) => {
+              gallery[index + i] = { url };
+            });
+          }
+
+          if (!index && (!deleteIndexes || !deleteIndexes.length)) {
+            gallery.push(...uploadedUrls.map((url) => ({ url })));
+          }
+
+          update["productModels.$[m].colors.$[c].productGallery"] = gallery;
+        }
+
+        break;
+
+      default:
+        return res
+          .status(400)
+          .json({ success: false, message: "Invalid section" });
+    }
+
+    await Demo.updateOne(query, update, { arrayFilters });
+
+    res.json({
+      success: true,
+      message: "Color updated successfully",
+      uploadedUrls,
+    });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ success: false, message: error.message });
+  }
+};
 
 export const updateProductSellController = async (req, res) => {
   try {
     const { productId, modelId } = req.params;
     const updateData = req.body; // expected: { saleProduct: true, tradingProduct: true, ... }
 
-    const updatedSchem = await updateProductSellService(productId, modelId, updateData);
+    const updatedSchem = await updateProductSellService(
+      productId,
+      modelId,
+      updateData
+    );
 
     return res.status(200).json({
       success: true,
@@ -433,4 +684,45 @@ export const updateProductSellController = async (req, res) => {
     });
   }
 };
+
+export const deleteModelController = async (req, res) => {
+  try {
+    const { productId, modelId } = req.params;
+
+    // Validate IDs
+    if (!mongoose.Types.ObjectId.isValid(productId)) {
+      return res
+        .status(400)
+        .json({ success: false, message: "Invalid productId" });
+    }
+    if (!mongoose.Types.ObjectId.isValid(modelId)) {
+      return res
+        .status(400)
+        .json({ success: false, message: "Invalid modelId" });
+    }
+
+    // Remove the model from the productModels array
+    const updatedProduct = await Demo.findOneAndUpdate(
+      { _id: productId },
+      { $pull: { productModels: { _id: modelId } } },
+      { new: true }
+    );
+
+    if (!updatedProduct) {
+      return res
+        .status(404)
+        .json({ success: false, message: "Product not found" });
+    }
+
+    return res.json({
+      success: true,
+      message: "Model deleted successfully",
+      product: updatedProduct,
+    });
+  } catch (error) {
+    console.error("Error deleting model:", error);
+    return res.status(500).json({ success: false, message: error.message });
+  }
+};
+
 

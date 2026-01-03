@@ -79,10 +79,12 @@ const accessorizeSchema = new mongoose.Schema(
 );
 
 /* ================= AUTO FINAL PRICE ================= */
-accessorizeSchema.pre("save", function (next) {
-  const { price, discount } = this.priceDetails;
-  this.priceDetails.finalPrice = discount > 0 ? Math.round(price - (price * discount) / 100) : price;
-  next();
+
+
+accessorizeSchema.pre("save", function () {
+  if (this.price != null) {
+    this.finalPrice = this.price - Math.round((this.price * (this.discount || 0)) / 100);
+  }
 });
 
 /* ================= EXPORT ================= */

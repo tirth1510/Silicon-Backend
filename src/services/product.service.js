@@ -124,6 +124,7 @@ export const getAllModelsWithProductInfoService = async () => {
       productTitle: 1,
       productCategory: 1,
       productModels: 1,
+      description :1,
     }
   ).lean();
 
@@ -136,6 +137,7 @@ export const getAllModelsWithProductInfoService = async () => {
         result.push({
           productId: product._id,
           productTitle: product.productTitle,
+          productDescription: product.description, 
           productCategory: product.productCategory,
           modelId: model._id,
           modelName: model.modelName,
@@ -371,10 +373,12 @@ export const updateModelService = async (productId, modelId, payload) => {
   return updatedModel;
 };
 
+
 export const updateModelDetailsService = async (
   productId,
   modelId,
-  payload
+  section,
+  data
 ) => {
   if (
     !mongoose.Types.ObjectId.isValid(productId) ||
@@ -383,35 +387,28 @@ export const updateModelDetailsService = async (
     throw new Error("Invalid productId or modelId");
   }
 
-  // First, ensure productModelDetails is not null
-  await Demo.updateOne(
-    { _id: productId, "productModels._id": modelId },
-    { $set: { "productModels.$.productModelDetails": {} } },
-    { upsert: false }
-  );
-
-  const allowedFields = [
+  const allowedSections = [
     "specifications",
     "productSpecifications",
     "productFeatures",
     "warranty",
   ];
-  const updateData = {};
 
-  for (const field of allowedFields) {
-    if (payload[field] !== undefined) {
-      updateData[`productModels.$.productModelDetails.${field}`] =
-        payload[field];
-    }
+  if (!allowedSections.includes(section)) {
+    throw new Error("Invalid section type");
   }
 
-  if (Object.keys(updateData).length === 0) {
-    throw new Error("No valid fields provided for update");
+  if (!data || Object.keys(data).length === 0) {
+    throw new Error("Update data is empty");
   }
+
+  const updateQuery = {
+    [`productModels.$.productModelDetails.${section}`]: data,
+  };
 
   const updatedProduct = await Demo.findOneAndUpdate(
     { _id: productId, "productModels._id": modelId },
-    { $set: updateData },
+    { $set: updateQuery },
     { new: true }
   );
 
@@ -419,11 +416,12 @@ export const updateModelDetailsService = async (
     throw new Error("Product or Model not found");
   }
 
-  const updatedModel = updatedProduct.productModels.find(
+  return updatedProduct.productModels.find(
     (m) => m._id.toString() === modelId
   );
-  return updatedModel;
 };
+
+
 
 export const updateColorDetailsService = async (
   productId,
@@ -477,14 +475,6 @@ export const updateColorDetailsService = async (
 
 
 
-
-/**
- * Update product sell flags for a specific model of a product
- * @param {string} productId 
- * @param {string} modelId 
- * @param {object} updateData - Keys like saleProduct, tradingProduct, etc.
- * @returns {object} updated schem
- */
 export const updateProductSellService = async (productId, modelId, updateData) => {
   const product = await Demo.findById(productId);
   if (!product) throw new Error("Product not found");

@@ -5,9 +5,11 @@ import {
   getAllProducts,
   getAccessoryById,
   createBulkProducts,
+  getPaddingProducts,
+  updateProductStatusController,
+  deleteProductController,
+  updateProductController,
 } from "../controllers/accessorize.controller.js";
-
-import {updateProductSpecificationsController} from "../controllers/try.controller.js"
 
 const router = express.Router();
 
@@ -31,6 +33,7 @@ router.post(
   createProduct
 );
 router.get("/all", getAllProducts);
+router.get("/padding/all", getPaddingProducts);
 
 router.post(
   "/create/bulk",
@@ -43,6 +46,16 @@ router.post(
 
 router.get("/:id", getAccessoryById);
 
+router.put("/:id/status",updateProductStatusController )
 
-router.post("/update/productSpecifications", updateProductSpecificationsController);
+
+router.put("/:id", upload.fields([
+  { name: "productImages" },
+  { name: "galleryImages" },
+]), updateProductController);
+
+
+
+router.delete("/:id", deleteProductController);
+
 export default router;
