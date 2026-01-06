@@ -3,6 +3,11 @@ import bcrypt from "bcrypt";
 
 const adminSchema = new mongoose.Schema(
   {
+    googleId: {
+      type: String,
+      unique: true,
+      sparse: true, 
+    },
     username: { type: String, required: true },
     password: { type: String, required: true },
     email: { type: String, required: true, unique: true },
@@ -10,17 +15,20 @@ const adminSchema = new mongoose.Schema(
     role: { type: String, enum: ["admin"], default: "admin" },
     accessToken: { type: String, default: null },
     tokenExpiresAt: { type: Date, default: null },
+    isVerified:{
+      type:Boolean,
+      default:false
+    }
   },
   { timestamps: true }
 );
 
-adminSchema.pre("save", async function (next) {
-  if (!this.isModified("password")) return next();
+adminSchema.pre("save", async function () {
+  if (!this.isModified("password")) return ;
 
   const saltRounds = 6;
 
   this.password = await bcrypt.hash(this.password, saltRounds);
-  next();
 });
 
 // Method to compare password during login

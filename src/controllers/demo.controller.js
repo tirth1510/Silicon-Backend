@@ -1,4 +1,3 @@
-import mongoose from "mongoose";
 
 import {
   createProductStep1Service,
@@ -16,6 +15,8 @@ import {
   getProductsBySchemeService,
   updateProductSellService,
 } from "../services/product.service.js";
+import mongoose from "mongoose";
+
 import { Demo } from "../models/demo.model.js";
 import cloudinary from "../config/cloudinary.js";
 import { Readable } from "stream";
@@ -33,6 +34,127 @@ const uploadToCloudinary = (fileBuffer) => {
   });
 };
 
+export const updateColorBySection = async (req, res) => {
+  try {
+    const { productId, modelId, colorId, section } = req.params;
+    const { colorName, stock, price, discount, mainImage, productImages, galleryImages, index, deleteIndexes = [] } = req.body;
+
+    const product = await Demo.findById(productId);
+    if (!product) return res.status(404).json({ success: false, message: "Product not found" });
+
+    const model = product.productModels.find(m => m._id.toString() === modelId);
+    if (!model) return res.status(404).json({ success: false, message: "Model not found" });
+
+    const color = model.productModelDetails?.colors.find(c => c._id.toString() === colorId);
+    if (!color) return res.status(404).json({ success: false, message: "Color not found" });
+
+    // ---------------- CONDITION: DETAILS ----------------
+    if (section === "details") {
+      if (colorName !== undefined) color.colorName = colorName;
+      if (stock !== undefined) color.stock = Number(stock);
+
+      if (price !== undefined || discount !== undefined) {
+        const existingPrice = color.colorPrice?.[0] || { price: 0, discount: 0, finalPrice: 0 };
+        const newPrice = price !== undefined ? Number(price) : existingPrice.price;
+        const newDiscount = discount !== undefined ? Number(discount) : existingPrice.discount;
+        const finalPrice = newPrice - Math.round((newPrice * newDiscount) / 100);
+
+        if (!color.colorPrice?.length) {
+          color.colorPrice = [{ price: newPrice, discount: newDiscount, finalPrice }];
+        } else {
+          color.colorPrice[0].price = newPrice;
+          color.colorPrice[0].discount = newDiscount;
+          color.colorPrice[0].finalPrice = finalPrice;
+        }
+      }
+    }
+
+  // ---------------- CONDITION: IMAGES ----------------
+if (section === "images") {
+  // Main image
+  if (req.files?.mainImage?.[0]) {
+    const result = await uploadToCloudinary(req.files.mainImage[0].buffer);
+    color.imageUrl = result.secure_url;
+  }
+
+  // Product images
+  if (req.files?.productImages || req.body.deleteProductIndexes) {
+    let images = [...(color.productImageUrl || [])];
+
+    // Delete by index
+    if (req.body.deleteProductIndexes) {
+      const deleteIndexes = JSON.parse(req.body.deleteProductIndexes);
+      deleteIndexes.sort((a, b) => b - a).forEach(i => {
+        if (i >= 0 && i < images.length) images.splice(i, 1);
+      });
+    }
+
+    // Replace at index
+    if (req.body.index !== undefined && req.files?.productImages) {
+      const uploaded = [];
+      for (const file of req.files.productImages) {
+        const result = await uploadToCloudinary(file.buffer);
+        uploaded.push({ url: result.secure_url });
+      }
+      uploaded.forEach((img, i) => {
+        images[Number(req.body.index) + i] = img;
+      });
+    }
+
+    // Append new
+    if (req.body.index === undefined && req.files?.productImages && !req.body.deleteProductIndexes) {
+      for (const file of req.files.productImages) {
+        const result = await uploadToCloudinary(file.buffer);
+        images.push({ url: result.secure_url });
+      }
+    }
+
+    color.productImageUrl = images;
+  }
+
+  // Gallery images
+  if (req.files?.galleryImages || req.body.deleteGalleryIndexes) {
+    let gallery = [...(color.productGallery || [])];
+
+    // Delete by index
+    if (req.body.deleteGalleryIndexes) {
+      const deleteIndexes = JSON.parse(req.body.deleteGalleryIndexes);
+      deleteIndexes.sort((a, b) => b - a).forEach(i => {
+        if (i >= 0 && i < gallery.length) gallery.splice(i, 1);
+      });
+    }
+
+    // Replace at index
+    if (req.body.index !== undefined && req.files?.galleryImages) {
+      const uploaded = [];
+      for (const file of req.files.galleryImages) {
+        const result = await uploadToCloudinary(file.buffer);
+        uploaded.push({ url: result.secure_url });
+      }
+      uploaded.forEach((img, i) => {
+        gallery[Number(req.body.index) + i] = img;
+      });
+    }
+
+    // Append new
+    if (req.body.index === undefined && req.files?.galleryImages && !req.body.deleteGalleryIndexes) {
+      for (const file of req.files.galleryImages) {
+        const result = await uploadToCloudinary(file.buffer);
+        gallery.push({ url: result.secure_url });
+      }
+    }
+
+    color.productGallery = gallery;
+  }
+}
+
+    // ---------------- SAVE ----------------
+    await product.save();
+    res.json({ success: true, message: "Update applied successfully", color });
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
+  }
+};
 // --------------   create opration apis
 
 //step-1
@@ -494,172 +616,8 @@ export const updateColorDetailsController = async (req, res) => {
   }
 };
 
-export const updateColorBySection = async (req, res) => {
-  try {
-    const { productId, modelId, colorId, section } = req.params;
-    const {
-      index,
-      deleteIndexes,
-      colorName,
-      stock,
-      price,
-      discount,
-      mainImage,
-      productImages,
-      galleryImages,
-    } = req.body;
 
-    if (!mongoose.Types.ObjectId.isValid(productId))
-      return res
-        .status(400)
-        .json({ success: false, message: "Invalid productId" });
 
-    const query = {
-      _id: productId,
-      "productModels._id": modelId,
-      "productModels.colors._id": colorId,
-    };
-
-    const arrayFilters = [{ "m._id": modelId }, { "c._id": colorId }];
-
-    let update = {};
-    let uploadedUrls = [];
-
-    // ---------------- Upload files if any ----------------
-    if (req.files && Object.keys(req.files).length > 0) {
-      const files = Object.values(req.files).flat();
-      for (const file of files) {
-        const uploaded = await uploadToCloudinary(
-          file.buffer,
-          "products/colors"
-        );
-        uploadedUrls.push(uploaded.secure_url);
-      }
-    } else if (req.file) {
-      const uploaded = await uploadToCloudinary(
-        req.file.buffer,
-        "products/colors"
-      );
-      uploadedUrls.push(uploaded.secure_url);
-    }
-
-    switch (section) {
-      // ---------------- Color metadata ----------------
-      case "details":
-        const detailsUpdate = {};
-        if (colorName !== undefined)
-          detailsUpdate["productModels.$[m].colors.$[c].colorName"] = colorName;
-        if (stock !== undefined)
-          detailsUpdate["productModels.$[m].colors.$[c].stock"] = Number(stock);
-        if (price !== undefined)
-          detailsUpdate["productModels.$[m].colors.$[c].colorPrice.0.price"] =
-            Number(price);
-        if (discount !== undefined)
-          detailsUpdate[
-            "productModels.$[m].colors.$[c].colorPrice.0.discount"
-          ] = Number(discount);
-
-        if (Object.keys(detailsUpdate).length === 0)
-          return res
-            .status(400)
-            .json({ success: false, message: "No details provided to update" });
-
-        update = { $set: detailsUpdate };
-        break;
-
-      // ---------------- Images ----------------
-      case "images":
-        if (!uploadedUrls.length && !deleteIndexes && index === undefined)
-          return res
-            .status(400)
-            .json({
-              success: false,
-              message: "Image(s) required or deleteIndexes or index",
-            });
-
-        update = { $set: {}, $push: {} };
-
-        // Fetch current color data
-        const product = await Demo.findOne(query).lean();
-        const color = product.productModels
-          .find((m) => m._id.toString() === modelId)
-          .colors.find((c) => c._id.toString() === colorId);
-
-        // ---------------- Main Image ----------------
-        if (mainImage && uploadedUrls.length) {
-          update["productModels.$[m].colors.$[c].imageUrl"] = uploadedUrls[0];
-        }
-
-        // ---------------- Product Images ----------------
-        if (productImages) {
-          let images = color.productImageUrl || [];
-
-          if (deleteIndexes?.length) {
-            deleteIndexes
-              .sort((a, b) => b - a)
-              .forEach((i) => {
-                if (i >= 0 && i < images.length) images.splice(i, 1);
-              });
-          }
-
-          if (index !== undefined) {
-            uploadedUrls.forEach((url, i) => {
-              images[index + i] = { url };
-            });
-          }
-
-          if (!index && (!deleteIndexes || !deleteIndexes.length)) {
-            images.push(...uploadedUrls.map((url) => ({ url })));
-          }
-
-          update["productModels.$[m].colors.$[c].productImageUrl"] = images;
-        }
-
-        // ---------------- Gallery Images ----------------
-        if (galleryImages) {
-          let gallery = color.productGallery || [];
-
-          if (deleteIndexes?.length) {
-            deleteIndexes
-              .sort((a, b) => b - a)
-              .forEach((i) => {
-                if (i >= 0 && i < gallery.length) gallery.splice(i, 1);
-              });
-          }
-
-          if (index !== undefined) {
-            uploadedUrls.forEach((url, i) => {
-              gallery[index + i] = { url };
-            });
-          }
-
-          if (!index && (!deleteIndexes || !deleteIndexes.length)) {
-            gallery.push(...uploadedUrls.map((url) => ({ url })));
-          }
-
-          update["productModels.$[m].colors.$[c].productGallery"] = gallery;
-        }
-
-        break;
-
-      default:
-        return res
-          .status(400)
-          .json({ success: false, message: "Invalid section" });
-    }
-
-    await Demo.updateOne(query, update, { arrayFilters });
-
-    res.json({
-      success: true,
-      message: "Color updated successfully",
-      uploadedUrls,
-    });
-  } catch (error) {
-    console.error(error);
-    res.status(500).json({ success: false, message: error.message });
-  }
-};
 
 export const updateProductSellController = async (req, res) => {
   try {
@@ -724,5 +682,3 @@ export const deleteModelController = async (req, res) => {
     return res.status(500).json({ success: false, message: error.message });
   }
 };
-
-

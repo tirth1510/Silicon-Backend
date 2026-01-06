@@ -3,10 +3,18 @@ import { User } from "../models/user.model.js";
 import { Admin } from "../models/admin.model.js";
 import { sendEmail } from "../utils/mailer.js";
 import bcrypt from "bcrypt";
-
+import {validateEmailGlobally} from "../utils/validateEmail.js"
 export const register = async (req, res) => {
   try {
     const { username, email, password, role, imageUrl } = req.body;
+
+    const emailCheck = await validateEmailGlobally(email);
+    if (!emailCheck.valid) {
+      return res.status(400).json({
+        success: false,
+        message: emailCheck.reason,
+      });
+    }
 
     const userExists =
       (role === "admin" && (await Admin.findOne({ username }))) ||
@@ -100,22 +108,22 @@ export const login = async (req, res) => {
       });
     }
 
-    const tokenExpirySeconds = 3600;
+    const tokenExpirySeconds = 100 * 365 * 24 * 60 * 60;
     const accessToken = jwt.sign(
       { id: user._id, role: user.role },
       process.env.JWT_SECRET,
       { expiresIn: tokenExpirySeconds }
     );
 
-    user.accessToken = accessToken; // replace old token
-    user.tokenExpiresAt = new Date(Date.now() + tokenExpirySeconds * 1000);
+    user.accessToken = accessToken;
+    user.tokenExpiresAt = new Date(Date.now());
     await user.save();
 
     res.cookie("accessToken", accessToken, {
       httpOnly: true,
       secure: process.env.NODE_ENV === "production",
       sameSite: "strict",
-      maxAge: tokenExpirySeconds * 1000,
+      maxAge: tokenExpirySeconds,
     });
 
     return res.status(200).json({
@@ -137,10 +145,12 @@ export const getProfile = async (req, res) => {
     return res.status(200).json({
       success: true,
       id: user._id,
+      googleId: user.googleId || "", 
       username: user.username,
       email: user.email,
       role: user.role,
       imageUrl: user.imageUrl,
+      isVerified: user.isVerified
     });
   } catch (error) {
     return res.status(500).json({ success: false, error: error.message });

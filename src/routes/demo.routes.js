@@ -2,6 +2,7 @@ import express from "express";
 import multer from "multer";
 
 import {
+  updateColorBySection,
   createProductStep1,
   addProductModelDetails,
   addColorToModel,
@@ -15,7 +16,6 @@ import {
   updateProductSellController,
   getProductSellController,
   getProductByModelIdController,
-  updateColorBySection,
   getProductsByScheme,
   deleteModelController,
 } from "../controllers/demo.controller.js";
@@ -107,10 +107,7 @@ router.put(
   updateModelDetailsController
 );
 
-router.put(
-  "/products/:productId/models/:modelId/colors/:colorId",
-  updateColorDetailsController
-);
+
 
 router.patch(
   "/products/:productId/models/:modelId/sell",
@@ -119,8 +116,12 @@ router.patch(
 
 
 router.put(
-  "/products/:productId/models/:modelId/colors/:colorId/:section",
-  upload.any(), // Accept any uploaded images (single or multiple)
+  "/products/color/:productId/models/:modelId/colors/:colorId/:section",
+   upload.fields([
+  { name: "mainImage", maxCount: 1 },
+  { name: "productImages", maxCount: 10 },
+  { name: "galleryImages", maxCount: 10 }
+]),
   updateColorBySection
 );
 

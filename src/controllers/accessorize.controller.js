@@ -6,13 +6,13 @@ import {
   getAllProductService,
   updateProductStatusService,
   deleteProductService,
-  updateProductService
 } from "../services/accessorize.service.js";
 
 import {
   validateCreateProduct,
   validateBulkProduct,
 } from "../validations/accessorize.validation.js";
+import {Accessorize} from "../models/accessorize.model.js"
 
 export const createProduct = async (req, res) => {
   try {
@@ -188,17 +188,114 @@ export const updateProductStatusController = async (req, res) => {
 
 
 
+                    //// /-------------------------/  /// 
 
 
-export const updateProductController = async (req, res) => {
+//Step-1
+
+
+/**
+ * Update product basic details
+ * Fields: productCategory, productTitle, stock, description
+ */
+export const updateBasicDetailsController = async (req, res) => {
   try {
     const { id } = req.params;
-    const updatedProduct = await updateProductService(id, req.body, req.files);
-    res.status(200).json({ success: true, message: "Product updated successfully", data: updatedProduct });
-  } catch (err) {
-    res.status(400).json({ success: false, message: err.message });
+    const { productCategory, productTitle, stock, description } = req.body;
+
+    if (!productCategory || !productTitle || !description) {
+      return res.status(400).json({
+        success: false,
+        message: "productCategory, productTitle, and description are required",
+      });
+    }
+
+    const updatedProduct = await Accessorize.findByIdAndUpdate(
+      id,
+      {
+        "basicDetails.productCategory": productCategory,
+        "basicDetails.productTitle": productTitle,
+        "basicDetails.stock": stock,
+        "basicDetails.description": description,
+      },
+      { new: true, runValidators: true }
+    );
+
+    if (!updatedProduct) {
+      return res.status(404).json({ success: false, message: "Product not found" });
+    }
+
+    res.json({
+      success: true,
+      message: "Product basic details updated successfully",
+      product: updatedProduct,
+    });
+  } catch (error) {
+    console.error("Error updating product basic details:", error);
+    res.status(500).json({ success: false, message: "Server error" });
   }
 };
+
+
+///    Step- 2 Price
+
+// controllers/accessoryController.js
+
+export const updatePriceController = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { price, discount, currency } = req.body;
+
+    // Validate required fields
+    if (price == null) {
+      return res.status(400).json({
+        success: false,
+        message: "Price is required",
+      });
+    }
+
+    // Calculate finalPrice
+    const discountAmount = (price * (discount || 0)) / 100;
+    const finalPrice = price - discountAmount;
+
+    // Update product
+    const updatedProduct = await Accessorize.findByIdAndUpdate(
+      id,
+      {
+        "priceDetails.price": price,
+        "priceDetails.discount": discount || 0,
+        "priceDetails.currency": currency || "INR",
+        "priceDetails.finalPrice": finalPrice, // auto set
+      },
+      { new: true, runValidators: true }
+    ).lean();
+
+    if (!updatedProduct) {
+      return res.status(404).json({
+        success: false,
+        message: "Product not found",
+      });
+    }
+
+    res.json({
+      success: true,
+      message: "Product price updated successfully",
+      product: updatedProduct,
+    });
+  } catch (error) {
+    console.error("Error updating product price:", error);
+    res.status(500).json({
+      success: false,
+      message: "Server error",
+      error: error.message,
+    });
+  }
+};
+
+
+
+
+
 
 
 
