@@ -8,8 +8,7 @@ import {
   getPaddingProducts,
   updateProductStatusController,
   deleteProductController,
-  updateBasicDetailsController,
-  updatePriceController
+  updateAccssoriesDetails,
 } from "../controllers/accessorize.controller.js";
 
 const router = express.Router();
@@ -47,28 +46,19 @@ router.post(
 
 router.get("/:id", getAccessoryById);
 
-router.put("/:id/status",updateProductStatusController )
-
+router.put("/:id/status", updateProductStatusController);
 
 // router.put("/:id", upload.fields([
 //   { name: "productImages" },
 //   { name: "galleryImages" },
 // ]), updateProductController);
 
-////// Update //////////////
-
-// step-1
-
-router.put("/products/:id/basic/step", updateBasicDetailsController);
-
-// Step -2
-
-router.put("/products/:id/price", updatePriceController);
-
-
-
-
-
+router.put(
+  "/:id",
+  upload.fields([
+    { name: "productImageUrl", maxCount: 5 }, // allow up to 5 for flexibility
+    { name: "productGallery", maxCount: 10 },
+  ]),updateAccssoriesDetails)
 
 
 
@@ -76,3 +66,6 @@ router.put("/products/:id/price", updatePriceController);
 router.delete("/:id", deleteProductController);
 
 export default router;
+
+
+
