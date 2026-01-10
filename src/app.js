@@ -7,7 +7,7 @@ import demoRoutes from "./routes/demo.routes.js";
 import accessorizeRoutes from "./routes/accessorize.routes.js";
 import contactRoutes from "./routes/contect.routes.js";
 import categoryRoutes from "./routes/category.routes.js";
-import userRoutes from "./routes/auth.routes.js"
+import userRoutes from "./routes/auth.routes.js";
 dotenv.config();
 
 const app = express();
@@ -17,8 +17,10 @@ app.use(express.json());
 app.use(express.urlencoded({ extended: true })); // important for form-data
 app.use(
   cors({
-    origin:[ "http://localhost:3000"],
+    origin: ["http://localhost:3000"],
     credentials: true,
+    methods: ["GET", "POST", "PUT", "DELETE"],
+    allowedHeaders: ["Content-Type", "Authorization"],
   })
 );
 app.use(cookieParser());
@@ -30,7 +32,6 @@ app.use("/api/demo", demoRoutes);
 app.use("/api/contact", contactRoutes);
 app.use("/api/accessorize", accessorizeRoutes);
 app.use("/api/categories", categoryRoutes);
-app.use("/api/auth", userRoutes)
-
+app.use("/api/auth", userRoutes);
 
 export default app;
