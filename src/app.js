@@ -17,7 +17,7 @@ app.use(express.json());
 app.use(express.urlencoded({ extended: true })); // important for form-data
 app.use(
   cors({
-    origin: ["http://localhost:3000","https://from-fill-u8c7.vercel.app/"],
+    origin: ["http://localhost:3000","https://from-fill-u8c7.vercel.app"],
     credentials: true,
     methods: ["GET", "POST", "PUT", "DELETE"],
     allowedHeaders: ["Content-Type", "Authorization"],
