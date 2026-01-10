@@ -192,6 +192,9 @@ export const updateProductStatusController = async (req, res) => {
 
 
 // helper: upload buffer to Cloudinary
+
+
+
 const uploadToCloudinary = (fileBuffer) => {
   return new Promise((resolve, reject) => {
     const uploadStream = cloudinary.uploader.upload_stream(
@@ -206,42 +209,79 @@ const uploadToCloudinary = (fileBuffer) => {
 };
 
 function parseJsonArray(str, fieldName) {
-  if (str === undefined) return [];
+  if (!str) return [];
   try {
     const val = JSON.parse(str);
     if (!Array.isArray(val)) throw new Error(`${fieldName} must be an array`);
     return val;
   } catch (e) {
+    if (Array.isArray(str)) return str;
     const err = new Error(`Invalid JSON for ${fieldName}`);
     err.status = 400;
     throw err;
   }
 }
 
-// Helper: apply array operation (append / replace / delete)
+// Helper: apply array operation (Delete -> Replace -> Append)
 function applyArrayOps(currentArray, incomingArray, replaceIndexes, deleteIndex) {
-  const arr = Array.isArray(currentArray) ? [...currentArray] : [];
+  // 1. Create a copy of the current array
+  let arr = Array.isArray(currentArray) ? [...currentArray] : [];
 
-  if (deleteIndex !== undefined) {
-    const di = Number(deleteIndex);
-    if (!isNaN(di) && di >= 0 && di < arr.length) arr.splice(di, 1);
-    return arr;
-  }
-
-  if (replaceIndexes !== undefined) {
-    const idxs = Array.isArray(replaceIndexes)
-      ? replaceIndexes.map(Number)
-      : [Number(replaceIndexes)];
-    idxs.forEach((idx, i) => {
-      if (!isNaN(idx) && incomingArray[i] !== undefined) {
-        arr[idx] = incomingArray[i];
+  // 2. Handle Deletions
+  // We use a Set to track indices to remove to avoid index shifting issues during the process
+  const indicesToDelete = new Set();
+  if (deleteIndex !== undefined && deleteIndex !== null && deleteIndex !== "") {
+    let idxs = [];
+    try {
+      idxs = JSON.parse(deleteIndex);
+    } catch {
+      idxs = [deleteIndex];
+    }
+    if (!Array.isArray(idxs)) idxs = [idxs];
+    
+    idxs.forEach(i => {
+      const n = Number(i);
+      if (!isNaN(n) && n >= 0 && n < arr.length) {
+        indicesToDelete.add(n);
       }
     });
-    return arr;
   }
 
-  // Append by default
-  return [...arr, ...incomingArray];
+  // 3. Handle Replacements
+  // We apply replacements to the original positions (unless they are marked for deletion)
+  if (replaceIndexes !== undefined && replaceIndexes !== null && replaceIndexes !== "" && incomingArray && incomingArray.length > 0) {
+    let idxs = [];
+    try {
+      idxs = JSON.parse(replaceIndexes);
+    } catch {
+      idxs = [replaceIndexes];
+    }
+    if (!Array.isArray(idxs)) idxs = [idxs];
+
+    idxs.forEach((idx, i) => {
+      const n = Number(idx);
+      // Only replace if valid index and we have data for it
+      if (!isNaN(n) && n >= 0 && n < arr.length && incomingArray[i] !== undefined) {
+        // If the index is not marked for deletion, update it
+        if (!indicesToDelete.has(n)) {
+          arr[n] = incomingArray[i];
+        }
+      }
+    });
+  }
+
+  // 4. Filter out deleted items
+  // We do this after replacement to ensure replacement indices matched the original array structure
+  arr = arr.filter((_, index) => !indicesToDelete.has(index));
+
+  // 5. Handle Append
+  // If NO replace indexes were provided, we assume all incoming data is new and should be appended.
+  // If replace indexes WERE provided, we assume incoming data was meant for those replacements.
+  if ((replaceIndexes === undefined || replaceIndexes === null || replaceIndexes === "") && incomingArray && incomingArray.length > 0) {
+    arr.push(...incomingArray);
+  }
+
+  return arr;
 }
 
 
@@ -263,12 +303,22 @@ export const updateAccssoriesDetails = async (req, res) => {
         "productTitle",
         "description",
         "status",
-        "priceDetails",
         "stock",
       ];
       for (const key of allowedSimpleUpdates) {
         if (req.body[key] !== undefined) {
           updates[key] = req.body[key];
+        }
+      }
+
+      // Handle priceDetails (parse if string)
+      if (req.body.priceDetails !== undefined) {
+        try {
+          updates.priceDetails = typeof req.body.priceDetails === 'string' 
+            ? JSON.parse(req.body.priceDetails) 
+            : req.body.priceDetails;
+        } catch (e) {
+          return res.status(400).json({ message: "Invalid JSON for priceDetails" });
         }
       }
 
@@ -282,10 +332,9 @@ export const updateAccssoriesDetails = async (req, res) => {
           req.body.productSpecifications,
           "productSpecifications"
         );
-        const currentSpecs = productDoc.productSpecifications || [];
-
+        
         updates.productSpecifications = applyArrayOps(
-          currentSpecs,
+          productDoc.productSpecifications,
           incomingSpecs,
           req.body.specIndexes,
           req.body.deleteIndex
@@ -302,10 +351,9 @@ export const updateAccssoriesDetails = async (req, res) => {
           req.body.specifications,
           "specifications"
         );
-        const currentSpecs = productDoc.specifications || [];
-
+        
         updates.specifications = applyArrayOps(
-          currentSpecs,
+          productDoc.specifications,
           incomingSpecs,
           req.body.specificationIndexes,
           req.body.deleteSpecificationIndex
@@ -322,10 +370,9 @@ export const updateAccssoriesDetails = async (req, res) => {
           req.body.warranty,
           "warranty"
         );
-        const currentWarranty = productDoc.warranty || [];
-
+        
         updates.warranty = applyArrayOps(
-          currentWarranty,
+          productDoc.warranty,
           incomingWarranty,
           req.body.warrantyIndexes,
           req.body.deleteWarrantyIndex
@@ -333,78 +380,39 @@ export const updateAccssoriesDetails = async (req, res) => {
       }
 
       // ---------- productGallery (images) ----------
-      // Delete without upload
-      if (req.body.deleteGalleryIndex !== undefined) {
-        const gallery = Array.isArray(productDoc.productGallery)
-          ? [...productDoc.productGallery]
-          : [];
-        const idx = Number(req.body.deleteGalleryIndex);
-        if (!isNaN(idx) && idx >= 0 && idx < gallery.length) {
-          gallery.splice(idx, 1);
-        }
-        updates.productGallery = gallery;
+      let galleryIncoming = [];
+      if (req.files?.productGallery) {
+        const uploaded = await Promise.all(
+          req.files.productGallery.map((file) => uploadToCloudinary(file.buffer))
+        );
+        galleryIncoming = uploaded.map(res => ({ url: res.secure_url }));
       }
 
-      // Replace without append conflict: one file + index
-      if (req.files?.productGallery && req.body.replaceGalleryIndex !== undefined) {
-        const uploaded = await Promise.all(
-          req.files.productGallery.map((file) => uploadToCloudinary(file.buffer))
+      if (galleryIncoming.length > 0 || req.body.deleteGalleryIndex !== undefined) {
+        updates.productGallery = applyArrayOps(
+          productDoc.productGallery,
+          galleryIncoming,
+          req.body.replaceGalleryIndex,
+          req.body.deleteGalleryIndex
         );
-
-        const gallery = Array.isArray(productDoc.productGallery)
-          ? [...productDoc.productGallery]
-          : [];
-        const idx = Number(req.body.replaceGalleryIndex);
-        if (!isNaN(idx) && idx >= 0 && idx < gallery.length && uploaded[0]) {
-          gallery[idx] = { url: uploaded[0].secure_url };
-        }
-        updates.productGallery = gallery;
-      } else if (req.files?.productGallery && req.body.replaceGalleryIndex === undefined) {
-        // Append when no replace index provided
-        const uploaded = await Promise.all(
-          req.files.productGallery.map((file) => uploadToCloudinary(file.buffer))
-        );
-        const gallery = Array.isArray(productDoc.productGallery)
-          ? productDoc.productGallery
-          : [];
-        updates.productGallery = [
-          ...gallery,
-          ...uploaded.map((img) => ({ url: img.secure_url })),
-        ];
       }
 
       // ---------- productImageUrl (images) ----------
-      // Delete without upload
-      if (req.body.deleteImageIndex !== undefined) {
-        const images = Array.isArray(productDoc.productImageUrl)
-          ? [...productDoc.productImageUrl]
-          : [];
-        const idx = Number(req.body.deleteImageIndex);
-        if (!isNaN(idx) && idx >= 0 && idx < images.length) {
-          images.splice(idx, 1);
-        }
-        updates.productImageUrl = images;
+      let imageIncoming = [];
+      if (req.files?.productImageUrl) {
+        const uploaded = await Promise.all(
+          req.files.productImageUrl.map((file) => uploadToCloudinary(file.buffer))
+        );
+        imageIncoming = uploaded.map(res => ({ url: res.secure_url }));
       }
 
-      // Replace with upload (single file recommended)
-      if (req.files?.productImageUrl && req.body.replaceImageIndex !== undefined) {
-        const uploaded = await Promise.all(
-          req.files.productImageUrl.map((file) => uploadToCloudinary(file.buffer))
+      if (imageIncoming.length > 0 || req.body.deleteImageIndex !== undefined) {
+        updates.productImageUrl = applyArrayOps(
+          productDoc.productImageUrl,
+          imageIncoming,
+          req.body.replaceImageIndex,
+          req.body.deleteImageIndex
         );
-        const images = Array.isArray(productDoc.productImageUrl)
-          ? [...productDoc.productImageUrl]
-          : [];
-        const idx = Number(req.body.replaceImageIndex);
-        if (!isNaN(idx) && idx >= 0 && idx < images.length && uploaded[0]) {
-          images[idx] = { url: uploaded[0].secure_url };
-        }
-        updates.productImageUrl = images;
-      } else if (req.files?.productImageUrl && req.body.replaceImageIndex === undefined) {
-        // Overwrite field with new uploads (common behavior)
-        const uploaded = await Promise.all(
-          req.files.productImageUrl.map((file) => uploadToCloudinary(file.buffer))
-        );
-        updates.productImageUrl = uploaded.map((img) => ({ url: img.secure_url }));
       }
 
       // ---------- persist ----------
@@ -425,6 +433,7 @@ export const updateAccssoriesDetails = async (req, res) => {
       res.status(status).json({ message: error.message || "Server error" });
     }
   }
+
 
 
 
