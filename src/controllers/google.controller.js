@@ -83,7 +83,7 @@ export const googleLogin = async (req, res) => {
     // 🍪 Set cookie
     res.cookie("accessToken", accessToken, {
       httpOnly: true,
-      secure: process.env.NODE_ENV === "production",
+      secure: true,
       sameSite: "strict",
       maxAge: tokenExpirySeconds * 1000,
     });

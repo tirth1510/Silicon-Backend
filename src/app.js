@@ -17,7 +17,7 @@ app.use(express.json());
 app.use(express.urlencoded({ extended: true })); // important for form-data
 app.use(
   cors({
-    origin:[ "http://localhost:3000","https://silicon-backend-n54k.onrender.com"],
+    origin:[ "http://localhost:3000"],
     credentials: true,
   })
 );
