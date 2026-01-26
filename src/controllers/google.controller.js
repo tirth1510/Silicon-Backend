@@ -84,7 +84,7 @@ export const googleLogin = async (req, res) => {
      res.cookie("accessToken", accessToken, {
       httpOnly: true,
       secure: true,
-      sameSite: none,
+      sameSite: "none",
       maxAge: tokenExpirySeconds * 1000,
     });
 
