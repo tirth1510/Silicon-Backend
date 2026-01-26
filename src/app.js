@@ -11,7 +11,7 @@ import userRoutes from "./routes/auth.routes.js";
 dotenv.config();
 
 const app = express();
-
+app.set("trust proxy", 1);
 // Middleware
 app.use(express.json());
 app.use(express.urlencoded({ extended: true })); // important for form-data

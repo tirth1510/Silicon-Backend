@@ -81,12 +81,13 @@ export const googleLogin = async (req, res) => {
     await account.save();
 
     // 🍪 Set cookie
-    res.cookie("accessToken", accessToken, {
+     res.cookie("accessToken", accessToken, {
       httpOnly: true,
       secure: true,
-      sameSite: "strict",
+      sameSite: none,
       maxAge: tokenExpirySeconds * 1000,
     });
+
 
     return res.status(200).json({
       success: true,
