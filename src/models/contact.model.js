@@ -12,6 +12,13 @@ const contactSchema = new mongoose.Schema(
     companyLocation: String,
     messageTitle: String,
     message: { type: String, required: true },
+    // New fields for Product Enquiry
+    enquiryType: { type: String, default: "General" }, // "General" or "Product"
+    productTitle: String,
+    modelName: String,
+    productImageUrl: String,
+    productId: String,
+    modelId: String,
   },
   { timestamps: true }
 );
