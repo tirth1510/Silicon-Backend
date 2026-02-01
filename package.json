@@ -10,7 +10,7 @@
     "seed": "node src/scripts/runSeed.js",
     "test-db": "node src/scripts/testConnection.js",
     "list-products": "node src/scripts/listProducts.js"
-},
+  },
   "keywords": [],
   "author": "",
   "license": "ISC",
@@ -32,6 +32,7 @@
     "multer": "^2.0.2",
     "multer-storage-cloudinary": "^2.2.1",
     "nodemailer": "^7.0.12",
+    "twilio": "^5.12.0",
     "uuid": "^13.0.0",
     "validator": "^13.15.26",
     "zod": "^4.2.1"

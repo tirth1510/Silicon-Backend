@@ -14,8 +14,7 @@ router.get("/all", getAllContacts);
 router.post("/send-response", sendResponse);
 
 router.post("/product-enquiry", createProductEnquiry);
-router.get("/product-enquiries", getProductEnquiries);
+router.get("/product-enq  uiries", getProductEnquiries);
 
 router.post("/send-whatsapp", sendWhatsappMessage);
-
 export default router;
