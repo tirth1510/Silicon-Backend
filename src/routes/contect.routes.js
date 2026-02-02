@@ -1,7 +1,6 @@
 import express from "express";
 import {
   createContact,
-  sendWhatsappMessage,
   getAllContacts,
   sendResponse,
   createProductEnquiry,
@@ -16,5 +15,5 @@ router.post("/send-response", sendResponse);
 router.post("/product-enquiry", createProductEnquiry);
 router.get("/product-enq  uiries", getProductEnquiries);
 
-router.post("/send-whatsapp", sendWhatsappMessage);
+
 export default router;

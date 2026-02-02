@@ -8,134 +8,128 @@ export const register = async (req, res) => {
   try {
     const { username, email, password, role, imageUrl } = req.body;
 
+    // 1. Validate Email Format/Domain
     const emailCheck = await validateEmailGlobally(email);
     if (!emailCheck.valid) {
-      return res.status(400).json({
-        success: false,
-        message: emailCheck.reason,
+      return res.status(400).json({ success: false, message: emailCheck.reason });
+    }
+
+    // 2. Cross-check BOTH collections for global uniqueness
+    const [existingUser, existingAdmin] = await Promise.all([
+      User.findOne({ $or: [{ email }, { username }] }),
+      Admin.findOne({ $or: [{ email }, { username }] })
+    ]);
+
+    if (existingUser || existingAdmin) {
+      return res.status(400).json({ 
+        success: false, 
+        message: "Username or Email already in use across the platform" 
       });
     }
 
-    const userExists =
-      (role === "admin" && (await Admin.findOne({ username }))) ||
-      (role === "user" && (await User.findOne({ username })));
+    // 3. Initialize Document
+    const Model = role === "admin" ? Admin : User;
+    const createdUser = new Model({ username, email, password, role, imageUrl });
 
-    const emailExists =
-      (role === "admin" && (await Admin.findOne({ email }))) ||
-      (role === "user" && (await User.findOne({ email })));
-
-    if (userExists)
-      return res
-        .status(400)
-        .json({ success: false, message: "Username already taken" });
-    if (emailExists)
-      return res
-        .status(400)
-        .json({ success: false, message: "Email already registered" });
-
-    let createdUser;
-    if (role === "admin") {
-      createdUser = new Admin({ username, email, password, role, imageUrl });
-    } else {
-      createdUser = new User({ username, email, password, role, imageUrl });
-    }
-
-    await createdUser.save();
-
-    // Send Email
-    await sendEmail({
-      to: email,
-      subject: "Registration Successful",
-      html: `<h2>Hello ${username},</h2>
-             <p>Your account has been created successfully as a <strong>${role}</strong>.</p>`,
-    });
-
-    // Generate JWT token
-    const tokenExpirySeconds = 3600; // 1 hour
+    // 4. Generate Token (Do this before first save to avoid double writing if possible)
+    const tokenExpirySeconds = 3600; 
     const accessToken = jwt.sign(
       { id: createdUser._id, role },
       process.env.JWT_SECRET,
-      { expiresIn: tokenExpirySeconds }
+      { expiresIn: '1h' }
     );
 
-    createdUser.accessToken = accessToken; // store only one token
-    createdUser.tokenExpiresAt = new Date(
-      Date.now() + tokenExpirySeconds * 1000
-    );
+    createdUser.accessToken = accessToken;
+    createdUser.tokenExpiresAt = new Date(Date.now() + tokenExpirySeconds * 1000);
+
     await createdUser.save();
 
+    // 5. Fire-and-forget Email (Don't let email failure crash the response)
+    sendEmail({
+      to: email,
+      subject: "Welcome!",
+      html: `<h2>Hello ${username},</h2><p>Account created as ${role}.</p>`,
+    }).catch(err => console.error("Email failed to send:", err));
+
+    // 6. Set Cookie
     res.cookie("accessToken", accessToken, {
       httpOnly: true,
-      secure: true,
-      sameSite: none,
+      secure: process.env.NODE_ENV === "production",
+      sameSite: "strict",
       maxAge: tokenExpirySeconds * 1000,
     });
 
     return res.status(201).json({
       success: true,
-      message: `${role} registered successfully`,
-      emailMessage: "Email sent successfully",
-      id: createdUser._id,
-      username: createdUser.username,
-      email: createdUser.email,
-      role: createdUser.role,
-      imageUrl: createdUser.imageUrl,
-      accessToken,
-      tokenExpiresAt: createdUser.tokenExpiresAt,
+      user: {
+        id: createdUser._id,
+        username,
+        email,
+        role,
+        imageUrl,
+        tokenExpiresAt: createdUser.tokenExpiresAt
+      }
     });
+
   } catch (error) {
     console.error("Register Error:", error);
-    return res.status(500).json({ success: false, error: error.message });
+    return res.status(500).json({ success: false, error: "Registration failed." });
   }
 };
 
 export const login = async (req, res) => {
   try {
     const { email, password } = req.body;
-    let user =
-      (await User.findOne({ email })) || (await Admin.findOne({ email }));
-    if (!user)
-      return res
-        .status(400)
-        .json({ success: false, message: "Invalid email or password" });
 
-    const isMatch = await user.comparePassword(password);
+    // Search both in parallel for speed
+    const [userDoc, adminDoc] = await Promise.all([
+      User.findOne({ email }),
+      Admin.findOne({ email })
+    ]);
 
-    if (!isMatch) {
-      return res.status(400).json({
-        success: false,
-        message: "Invalid email or password",
-      });
+    const user = userDoc || adminDoc;
+
+    if (!user) {
+      return res.status(400).json({ success: false, message: "Invalid email or password" });
     }
 
-    const tokenExpirySeconds = 100 * 365 * 24 * 60 * 60;
+    const isMatch = await user.comparePassword(password);
+    if (!isMatch) {
+      return res.status(400).json({ success: false, message: "Invalid email or password" });
+    }
+
+    // Reduced to 7 days for better security posture
+    const sevenDaysInSeconds = 7 * 24 * 60 * 60;
     const accessToken = jwt.sign(
       { id: user._id, role: user.role },
       process.env.JWT_SECRET,
-      { expiresIn: tokenExpirySeconds }
+      { expiresIn: '7d' } 
     );
 
+    // Update user record
     user.accessToken = accessToken;
-    user.tokenExpiresAt = new Date(Date.now());
+    user.tokenExpiresAt = new Date(Date.now() + sevenDaysInSeconds * 1000);
     await user.save();
 
     res.cookie("accessToken", accessToken, {
       httpOnly: true,
-      secure: true,
-      sameSite: none,
-      maxAge: tokenExpirySeconds,
+      secure: process.env.NODE_ENV === "production", // Only secure in production
+      sameSite: "strict", 
+      maxAge: sevenDaysInSeconds * 1000,
     });
 
     return res.status(200).json({
       success: true,
       message: "Logged in successfully",
-      id: user._id,
-      username: user.username,
-      email: user.email,
-      role: user.role,
+      user: {
+        id: user._id,
+        username: user.username,
+        email: user.email,
+        role: user.role,
+      }
     });
   } catch (error) {
-    return res.status(500).json({ success: false, error: error.message });
+    return res.status(500).json({ success: false, error: "Internal Server Error" });
   }
 };
 
@@ -159,40 +153,42 @@ export const getProfile = async (req, res) => {
 
 export const logout = async (req, res) => {
   try {
-    const token =
-      req.cookies.accessToken || req.headers.authorization?.split(" ")[1];
-    if (!token)
-      return res
-        .status(400)
-        .json({ success: false, message: "No token found" });
+    const token = req.cookies.accessToken || req.headers.authorization?.split(" ")[1];
 
-    const decoded = jwt.verify(token, process.env.JWT_SECRET);
-    let user =
-      decoded.role === "admin"
-        ? await Admin.findById(decoded.id)
-        : await User.findById(decoded.id);
+    if (!token) {
+      // If there's no token, they are effectively logged out anyway
+      return res.status(200).json({ success: true, message: "Already logged out" });
+    }
 
-    if (!user)
-      return res
-        .status(404)
-        .json({ success: false, message: "User not found" });
+    try {
+      // We use decode instead of verify here because we want to allow logout 
+      // even if the token is technically expired.
+      const decoded = jwt.decode(token);
 
-    user.accessToken = null; // remove token
-    user.tokenExpiresAt = null;
-    await user.save();
+      if (decoded && decoded.id) {
+        const Model = decoded.role === "admin" ? Admin : User;
+        
+        // Find and clear token fields in one step
+        await Model.findByIdAndUpdate(decoded.id, {
+          $unset: { accessToken: 1, tokenExpiresAt: 1 } // Completely removes the fields
+        });
+      }
+    } catch (jwtError) {
+      console.error("JWT Decode Error during logout:", jwtError);
+      // We continue anyway to clear the cookie
+    }
 
+    // Clear the cookie with matching attributes
     res.clearCookie("accessToken", {
       httpOnly: true,
-      sameSite: none,
       secure: true,
+      sameSite: "none", // Must be a string
     });
 
-    return res
-      .status(200)
-      .json({ success: true, message: "Logged out successfully" });
+    return res.status(200).json({ success: true, message: "Logged out successfully" });
   } catch (error) {
     console.error("Logout Error:", error);
-    return res.status(500).json({ success: false, error: error.message });
+    return res.status(500).json({ success: false, message: "Server error during logout" });
   }
 };
 

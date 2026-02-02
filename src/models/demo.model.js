@@ -65,10 +65,12 @@ const colorImageSchema = new mongoose.Schema(
       type: String,
       required: true,
       trim: true,
+      default: []
     },
     imageUrl: {
       type: String,
       required: true,
+      default: []
     },
     productImageUrl: {
       type: [imageSchema],
@@ -86,13 +88,8 @@ const colorImageSchema = new mongoose.Schema(
       type: Number,
       default: 0,
       min: 0,
+      default: []
     },
-    addtionalDetails : [
-      {
-        key: String,
-        value: String,
-      },
-    ],
   },
   { _id: true }
 );
@@ -172,6 +169,7 @@ const modelSchema = new mongoose.Schema(
       type: productModelDetailsSchema,
       default: null,
       required: false,
+      default: []
     },
   },
   { _id: true }

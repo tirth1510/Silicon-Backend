@@ -8,6 +8,7 @@ import accessorizeRoutes from "./routes/accessorize.routes.js";
 import contactRoutes from "./routes/contect.routes.js";
 import categoryRoutes from "./routes/category.routes.js";
 import userRoutes from "./routes/auth.routes.js";
+import tempRoutes from "./routes/temp.routes.js";
 dotenv.config();
 
 const app = express();
@@ -33,5 +34,5 @@ app.use("/api/contact", contactRoutes);
 app.use("/api/accessorize", accessorizeRoutes);
 app.use("/api/categories", categoryRoutes);
 app.use("/api/auth", userRoutes);
-
+app.use("/api/temp", tempRoutes); // Temporary route for testing
 export default app;

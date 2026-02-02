@@ -2,17 +2,37 @@ import { Contact } from "../models/contact.model.js";
 import { sendEmail } from "../utils/mailer.js";
 import { v4 as uuidv4 } from "uuid"; // import uuid
 import twilio from "twilio";
+import axios from "axios";
 
 const COMPANY_LOGO_URL =
   "https://res.cloudinary.com/dq4hevka1/image/upload/v1766235630/products/product-images/gbhs2ft4m5fqvwue0kol.png";
 
-const accountSid = process.env.TWILIO_ACCOUNT_SID;
-const authToken = process.env.TWILIO_AUTH_TOKEN;
-const twilioWhatsappNumber =
-  process.env.TWILIO_WHATSAPP_NUMBER || "+14155238886";
-const twilioClient =
-  accountSid && authToken ? twilio(accountSid, authToken) : null;
 
+// --- Meta WhatsApp Helper Function ---
+const sendMetaWhatsApp = async (to, message) => {
+  try {
+    const phoneId = process.env.META_PHONE_NUMBER_ID;
+    const token = process.env.META_ACCESS_TOKEN;
+
+    await axios.post(
+      `https://graph.facebook.com/v18.0/${phoneId}/messages`,
+      {
+        messaging_product: "whatsapp",
+        recipient_type: "individual",
+        to: to.replace(/\D/g, ""), // ફક્ત આંકડા જ મોકલવા
+        type: "text",
+        text: { body: message },
+      },
+      {
+        headers: { Authorization: `Bearer ${token}` },
+      }
+    );
+  } catch (err) {
+    console.error("Meta WhatsApp Error:", err.response?.data || err.message);
+  }
+};
+
+// 1. Create General Contact Enquiry
 export const createContact = async (req, res) => {
   try {
     const {
@@ -27,21 +47,13 @@ export const createContact = async (req, res) => {
       message,
     } = req.body;
 
-    // 1. Validation
     if (!name || !email || !phone || !message) {
-      return res.status(400).json({
-        success: false,
-        error: "Name, email, phone, and message are required",
-      });
+      return res.status(400).json({ success: false, error: "Name, email, phone, and message are required" });
     }
 
     const contactId = uuidv4();
-    // Phone number format fix for WhatsApp
-    const formattedUserPhone = phone.startsWith("+")
-      ? phone
-      : `+${phone.replace(/\s+/g, "")}`;
+    const formattedUserPhone = phone.replace(/\D/g, "");
 
-    // 2. Save contact in Database
     const newContact = await Contact.create({
       contactId,
       name,
@@ -56,13 +68,9 @@ export const createContact = async (req, res) => {
       enquiryType: "Enquiry",
     });
 
-    const emailHeader = `
-      <div style="text-align: center; margin-bottom: 20px;">
-        <img src="${COMPANY_LOGO_URL}" alt="Silicon Meditech" style="width: 180px; height: auto;"/>
-      </div>
-    `;
+    const emailHeader = `<div style="text-align: center; margin-bottom: 20px;"><img src="${COMPANY_LOGO_URL}" alt="Silicon Meditech" style="width: 180px; height: auto;"/></div>`;
 
-    // 3. Send notification email to Admin
+    // Admin Notification Email
     await sendEmail({
       to: process.env.SMTP_USER,
       subject: `New Inquiry from ${name}`,
@@ -79,7 +87,7 @@ export const createContact = async (req, res) => {
       `,
     });
 
-    // 4. Send acknowledgement email to User
+    // User Acknowledgement Email
     await sendEmail({
       to: email,
       subject: "We received your message",
@@ -90,144 +98,42 @@ export const createContact = async (req, res) => {
       `,
     });
 
-    // 5. --- WhatsApp Automation ---
-    if (twilioClient) {
-      try {
-        const adminPhone = process.env.ADMIN_WHATSAPP_NUMBER.startsWith("+")
-          ? process.env.ADMIN_WHATSAPP_NUMBER
-          : `+${process.env.ADMIN_WHATSAPP_NUMBER}`;
+    // Meta WhatsApp Notifications
+    const adminPhone = process.env.ADMIN_WHATSAPP_NUMBER;
+    const adminMsg = `🆕 *Enquiry Details*\n\n👤 *Name:* ${name}\n✉️ *Email:* ${email}\n📞 *Phone:* ${phone}\n🏢 *Company:* ${companyName || "N/A"}\n📝 *Message:* ${message}`;
+    await sendMetaWhatsApp(adminPhone, adminMsg);
 
-        // Fixed Admin Message String
-        const adminMsg =
-          `🆕 *Enquiry Details*\n\n` +
-          `👤 *Name:* ${name}\n` +
-          `✉️ *Email:* ${email}\n` +
-          `📞 *Phone:* ${phone}\n` +
-          `🏢 *Company:* ${companyName || "N/A"}\n` +
-          `📍 *Location:* ${companyLocation || "N/A"}\n` +
-          `📝 *Title:* ${messageTitle || "N/A"}\n` +
-          `📝 *Message:* ${message}`;
+    const userMsg = `Hello *${name}*! 👋\n\nThank you for reaching out to *Silicon Meditech*. We have received your inquiry. Our team will contact you soon!`;
+    await sendMetaWhatsApp(formattedUserPhone, userMsg);
 
-        // Send to Admin
-        await twilioClient.messages.create({
-          body: adminMsg,
-          from: `whatsapp:${twilioWhatsappNumber}`,
-          to: `whatsapp:${adminPhone}`,
-        });
-
-        // Send Thank You to User
-        const userMsg = `Hello *${name}*! 👋\n\nThank you for reaching out to *Silicon Meditech*. We have received your inquiry. Our team will contact you soon!`;
-
-        await twilioClient.messages.create({
-          body: userMsg,
-          from: `whatsapp:${twilioWhatsappNumber}`,
-          to: `whatsapp:${formattedUserPhone}`,
-        });
-      } catch (waError) {
-        console.error("WhatsApp Error:", waError.message);
-      }
-    }
-
-    return res.status(201).json({
-      success: true,
-      message: "Contact saved and notifications sent via Email & WhatsApp",
-      data: newContact,
-    });
+    return res.status(201).json({ success: true, message: "Contact saved and notifications sent via Email & Meta WhatsApp", data: newContact });
   } catch (error) {
     console.error("CONTACT ERROR:", error);
     return res.status(500).json({ success: false, error: error.message });
   }
 };
 
-export const sendResponse = async (req, res) => {
-  try {
-    const { contactId, responseMessage, sendWhatsapp } = req.body;
-
-    if (!contactId || !responseMessage) {
-      return res.status(400).json({
-        success: false,
-        message: "Contact ID and response message are required",
-      });
-    }
-
-    const contact = await Contact.findOne({ contactId });
-    if (!contact) {
-      return res
-        .status(404)
-        .json({ success: false, message: "Contact not found" });
-    }
-    const emailHeader = `
-      <div style="text-align: center; margin-bottom: 20px;">
-        <img src="${COMPANY_LOGO_URL}" alt="Silicon Meditech" style="width: 180px; height: auto;"/>
-      </div>
-    `;
-
-    // Send Email Response
-    await sendEmail({
-      to: contact.email,
-      subject: "Response to your inquiry",
-      html: `${emailHeader}<h2>Hello ${contact.name},</h2><p>${responseMessage}</p>`,
-    });
-
-    // Optional WhatsApp
-
-   return res
-      .status(200)
-      .json({ success: true, message: "Response sent successfully" });
-  } catch (error) {
-    return res.status(500).json({ success: false, error: error.message });
-  }
-};
-
+// 2. Create Product Enquiry
 export const createProductEnquiry = async (req, res) => {
   try {
     const {
-      name,
-      email,
-      phone,
-      message,
-      productTitle,
-      modelName,
-      productImageUrl,
-      productId,
-      modelId,
+      name, email, phone, message, productTitle, modelName, productImageUrl, productId, modelId,
     } = req.body;
 
-    // 1. Validation
     if (!name || !email || !phone || !message) {
-      return res.status(400).json({
-        success: false,
-        error: "Name, email, phone, and message are required",
-      });
+      return res.status(400).json({ success: false, error: "Name, email, phone, and message are required" });
     }
 
     const contactId = uuidv4();
-    const formattedUserPhone = phone.startsWith("+")
-      ? phone
-      : `+${phone.replace(/\s+/g, "")}`;
+    const formattedUserPhone = phone.replace(/\D/g, "");
 
-    // 2. Database mein save karein
     const newEnquiry = await Contact.create({
-      contactId,
-      name,
-      email,
-      phone: formattedUserPhone,
-      message,
-      enquiryType: "Product",
-      productTitle,
-      modelName,
-      productImageUrl,
-      productId,
-      modelId,
+      contactId, name, email, phone: formattedUserPhone, message, enquiryType: "Product", productTitle, modelName, productImageUrl, productId, modelId,
     });
 
-    const emailHeader = `
-      <div style="text-align: center; margin-bottom: 20px;">
-        <img src="${COMPANY_LOGO_URL}" alt="Silicon Meditech" style="width: 180px; height: auto;"/>
-      </div>
-    `;
+    const emailHeader = `<div style="text-align: center; margin-bottom: 20px;"><img src="${COMPANY_LOGO_URL}" alt="Silicon Meditech" style="width: 180px; height: auto;"/></div>`;
 
-    // 3. Admin Notification Email
+    // Admin Notification Email
     await sendEmail({
       to: process.env.SMTP_USER,
       subject: `Product Enquiry: ${productTitle} - ${modelName}`,
@@ -242,7 +148,7 @@ export const createProductEnquiry = async (req, res) => {
       `,
     });
 
-    // 4. User Acknowledgement Email
+    // User Acknowledgement Email
     await sendEmail({
       to: email,
       subject: `Enquiry Received: ${productTitle}`,
@@ -250,54 +156,56 @@ export const createProductEnquiry = async (req, res) => {
         ${emailHeader}
         <h2>Hello ${name},</h2>
         <p>Thank you for inquiring about our <strong>${productTitle}</strong>.</p>
-        <p>Our sales team has received your request and will provide the details shortly.</p>
         <p>Enquiry ID: #${contactId.slice(0, 8)}</p>
       `,
     });
 
-    // 5. --- WhatsApp Automation via Twilio ---
-    if (twilioClient) {
-      try {
-        const adminPhone = process.env.ADMIN_WHATSAPP_NUMBER.startsWith("+")
-          ? process.env.ADMIN_WHATSAPP_NUMBER
-          : `+${process.env.ADMIN_WHATSAPP_NUMBER}`;
+    // Meta WhatsApp Notifications
+    const adminPhone = process.env.ADMIN_WHATSAPP_NUMBER;
+    const adminMsg = `📦 *New Product Enquiry*\n\n🛍️ *Product:* ${productTitle}\n👤 *Client:* ${name}\n📞 *Phone:* ${phone}\n📝 *Message:* ${message}`;
+    await sendMetaWhatsApp(adminPhone, adminMsg);
 
-        // A. Admin Notification (WhatsApp)
-        const adminMsg =
-          `📦 *New Product Enquiry*\n\n` +
-          `🛍️ *Product:* ${productTitle}\n` +
-          `🔢 *Model:* ${modelName || "N/A"}\n` +
-          `👤 *Client:* ${name}\n` +
-          `📞 *Phone:* ${phone}\n` +
-          `📝 *Message:* ${message}`;
+    const userMsg = `Hello *${name}*! 👋\n\nThank you for your interest in *${productTitle}* at *Silicon Meditech*. Our team will contact you soon!`;
+    await sendMetaWhatsApp(formattedUserPhone, userMsg);
 
-        await twilioClient.messages.create({
-          body: adminMsg,
-          mediaUrl: [productImageUrl || COMPANY_LOGO_URL], // Admin ko product image dikhegi
-          from: `whatsapp:${twilioWhatsappNumber}`,
-          to: `whatsapp:${adminPhone}`,
-        });
-
-        // B. User "Thank You" (WhatsApp)
-        const userMsg = `Hello *${name}*! 👋\n\nThank you for your interest in *${productTitle}* at *Silicon Meditech*. Our team will contact you soon with the pricing and details!`;
-
-        await twilioClient.messages.create({
-          body: userMsg,
-          from: `whatsapp:${twilioWhatsappNumber}`,
-          to: `whatsapp:${phone}`,
-        });
-      } catch (waError) {
-        console.error("WhatsApp Error:", waError.message);
-      }
-    }
-
-    return res.status(201).json({
-      success: true,
-      message: "Product enquiry submitted successfully via Email & WhatsApp",
-      data: newEnquiry,
-    });
+    return res.status(201).json({ success: true, message: "Product enquiry submitted successfully", data: newEnquiry });
   } catch (error) {
     console.error("PRODUCT ENQUIRY ERROR:", error);
+    return res.status(500).json({ success: false, error: error.message });
+  }
+};
+
+// 3. Send Manual Response
+export const sendResponse = async (req, res) => {
+  try {
+    const { contactId, responseMessage } = req.body;
+
+    if (!contactId || !responseMessage) {
+      return res.status(400).json({ success: false, message: "Contact ID and response message are required" });
+    }
+
+    const contact = await Contact.findOne({ contactId });
+    if (!contact) {
+      return res.status(404).json({ success: false, message: "Contact not found" });
+    }
+
+    const emailHeader = `<div style="text-align: center; margin-bottom: 20px;"><img src="${COMPANY_LOGO_URL}" alt="Silicon Meditech" style="width: 180px; height: auto;"/></div>`;
+
+    await sendEmail({
+      to: contact.email,
+      subject: "Response to your inquiry",
+      html: `
+        ${emailHeader}
+        <h2>Hello ${contact.name},</h2>
+        <p>${responseMessage}</p>
+      `,
+    });
+
+    const userMsg = `Hello *${contact.name}*! 👋\n\n*${responseMessage}*`;
+    await sendMetaWhatsApp(contact.phone, userMsg);
+
+    return res.status(200).json({ success: true, message: "Response sent successfully via Email" });
+  } catch (error) {
     return res.status(500).json({ success: false, error: error.message });
   }
 };
