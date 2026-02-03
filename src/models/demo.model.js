@@ -65,12 +65,12 @@ const colorImageSchema = new mongoose.Schema(
       type: String,
       required: true,
       trim: true,
-      default: []
+      default: ""
     },
     imageUrl: {
       type: String,
       required: true,
-      default: []
+      default: ""
     },
     productImageUrl: {
       type: [imageSchema],
@@ -88,7 +88,6 @@ const colorImageSchema = new mongoose.Schema(
       type: Number,
       default: 0,
       min: 0,
-      default: []
     },
   },
   { _id: true }
@@ -130,7 +129,7 @@ const productModelDetailsSchema = new mongoose.Schema(
         },
       },
     ],
-    optiomalParameters: [
+    optionalParameters: [
       {
         iconName: {
           type: String,
@@ -142,7 +141,7 @@ const productModelDetailsSchema = new mongoose.Schema(
       type: [{ points: String }],
       default: [],
     },
-    schem: {
+    scheme: {
       type: productSellSchema,
       default: {},
     },
@@ -169,7 +168,6 @@ const modelSchema = new mongoose.Schema(
       type: productModelDetailsSchema,
       default: null,
       required: false,
-      default: []
     },
   },
   { _id: true }

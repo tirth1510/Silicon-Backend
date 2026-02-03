@@ -448,8 +448,8 @@ export const getProductsByScheme = async (req, res) => {
             ...model,
             productModelDetails: {
               ...model.productModelDetails,
-              schem: ALL_SCHEMES.reduce((acc, key) => {
-                acc[key] = !!model.productModelDetails.schem?.[key];
+              scheme: ALL_SCHEMES.reduce((acc, key) => {
+                acc[key] = !!model.productModelDetails.scheme?.[key];
                 return acc;
               }, {}),
             },
@@ -467,11 +467,11 @@ export const getProductsByScheme = async (req, res) => {
             );
 
             if (exModel) {
-              exModel.productModelDetails.schem = ALL_SCHEMES.reduce(
+              exModel.productModelDetails.scheme = ALL_SCHEMES.reduce(
                 (acc, key) => {
                   acc[key] =
-                    !!exModel.productModelDetails.schem[key] ||
-                    !!model.productModelDetails.schem?.[key];
+                    !!exModel.productModelDetails.scheme[key] ||
+                    !!model.productModelDetails.scheme?.[key];
                   return acc;
                 },
                 {}
@@ -481,8 +481,8 @@ export const getProductsByScheme = async (req, res) => {
                 ...model,
                 productModelDetails: {
                   ...model.productModelDetails,
-                  schem: ALL_SCHEMES.reduce((acc, key) => {
-                    acc[key] = !!model.productModelDetails.schem?.[key];
+                  scheme: ALL_SCHEMES.reduce((acc, key) => {
+                    acc[key] = !!model.productModelDetails.scheme?.[key];
                     return acc;
                   }, {}),
                 },
@@ -504,8 +504,8 @@ export const getProductsByScheme = async (req, res) => {
           ...model,
           productModelDetails: {
             ...model.productModelDetails,
-            schem: ALL_SCHEMES.reduce((acc, key) => {
-              acc[key] = !!model.productModelDetails.schem?.[key];
+            scheme: ALL_SCHEMES.reduce((acc, key) => {
+              acc[key] = !!model.productModelDetails.scheme?.[key];
               return acc;
             }, {}),
           },
@@ -624,7 +624,7 @@ export const updateProductSellController = async (req, res) => {
     const { productId, modelId } = req.params;
     const updateData = req.body; // expected: { saleProduct: true, tradingProduct: true, ... }
 
-    const updatedSchem = await updateProductSellService(
+    const updatedScheme = await updateProductSellService(
       productId,
       modelId,
       updateData
@@ -633,7 +633,7 @@ export const updateProductSellController = async (req, res) => {
     return res.status(200).json({
       success: true,
       message: "Product sell flags updated successfully",
-      data: updatedSchem,
+      data: updatedScheme,
     });
   } catch (err) {
     return res.status(500).json({
