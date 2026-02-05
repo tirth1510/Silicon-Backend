@@ -18,12 +18,13 @@ app.use(express.json());
 app.use(express.urlencoded({ extended: true })); // important for form-data
 app.use(
   cors({
-    origin: ["http://localhost:3000","https://from-fill-u8c7.vercel.app","https://silicon-frontend-5d1n.vercel.app"],
+    origin: ["http://localhost:3000","http://localhost:3001","https://from-fill-u8c7.vercel.app","https://silicon-frontend-5d1n.vercel.app"],
     credentials: true,
-    methods: ["GET", "POST", "PUT", "DELETE"],
+    methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
     allowedHeaders: ["Content-Type", "Authorization"],
   })
 );
+
 app.use(cookieParser());
 app.use(morgan("dev"));
 
@@ -34,5 +35,5 @@ app.use("/api/contact", contactRoutes);
 app.use("/api/accessorize", accessorizeRoutes);
 app.use("/api/categories", categoryRoutes);
 app.use("/api/auth", userRoutes);
-app.use("/api/temp", tempRoutes); // Temporary route for testing
+app.use("/api/temp", tempRoutes); 
 export default app;

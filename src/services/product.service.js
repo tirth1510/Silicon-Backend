@@ -482,17 +482,36 @@ export const updateProductSellService = async (productId, modelId, updateData) =
   const model = product.productModels.id(modelId);
   if (!model) throw new Error("Model not found");
 
-  // Initialize if missing
+  // Ensure structure
   if (!model.productModelDetails) model.productModelDetails = {};
   if (!model.productModelDetails.schem) model.productModelDetails.schem = {};
 
-  // Merge updates
-  model.productModelDetails.schem = {
-    ...model.productModelDetails.schem.toObject(),
-    ...updateData,
-  };
+  /**
+   * RULE:
+   * Max 4 models can have recommendedProduct = true
+   */
+  if (updateData.recommendedProduct === true) {
+    const recommendedCount = product.productModels.filter((m) => {
+      return (
+        m._id.toString() !== modelId &&
+        m.productModelDetails?.schem?.recommendedProduct === true
+      );
+    }).length;
+
+    if (recommendedCount >= 4) {
+      throw new Error(
+        "Recommendation limit reached. Please delete a model from recommendation schema first."
+      );
+    }
+  }
+
+  // Merge update safely
+  Object.assign(model.productModelDetails.schem, updateData);
+
+  model.markModified("productModelDetails.schem");
 
   await product.save();
+
   return model.productModelDetails.schem;
 };
 

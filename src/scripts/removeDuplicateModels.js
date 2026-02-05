@@ -1,10 +1,10 @@
 import mongoose from "mongoose";
 import dotenv from "dotenv";
-import { Demo } from "../models/demo.model.js";
+import { Demo } from "../models/demo.model";
 
 dotenv.config();
 
-const importProducts = async () => {
+const removeDuplicateModels = async () => {
   try {
     console.log("🚀 Starting duplicate model removal process...");
 
@@ -92,4 +92,4 @@ const importProducts = async () => {
   }
 };
 
-importProducts();
+removeDuplicateModels();

@@ -98,13 +98,13 @@ export const createContact = async (req, res) => {
       `,
     });
 
-    // Meta WhatsApp Notifications
-    const adminPhone = process.env.ADMIN_WHATSAPP_NUMBER;
-    const adminMsg = `🆕 *Enquiry Details*\n\n👤 *Name:* ${name}\n✉️ *Email:* ${email}\n📞 *Phone:* ${phone}\n🏢 *Company:* ${companyName || "N/A"}\n📝 *Message:* ${message}`;
-    await sendMetaWhatsApp(adminPhone, adminMsg);
+    // // Meta WhatsApp Notifications
+    // const adminPhone = process.env.ADMIN_WHATSAPP_NUMBER;
+    // const adminMsg = `🆕 *Enquiry Details*\n\n👤 *Name:* ${name}\n✉️ *Email:* ${email}\n📞 *Phone:* ${phone}\n🏢 *Company:* ${companyName || "N/A"}\n📝 *Message:* ${message}`;
+    // await sendMetaWhatsApp(adminPhone, adminMsg);
 
-    const userMsg = `Hello *${name}*! 👋\n\nThank you for reaching out to *Silicon Meditech*. We have received your inquiry. Our team will contact you soon!`;
-    await sendMetaWhatsApp(formattedUserPhone, userMsg);
+    // const userMsg = `Hello *${name}*! 👋\n\nThank you for reaching out to *Silicon Meditech*. We have received your inquiry. Our team will contact you soon!`;
+    // await sendMetaWhatsApp(formattedUserPhone, userMsg);
 
     return res.status(201).json({ success: true, message: "Contact saved and notifications sent via Email & Meta WhatsApp", data: newContact });
   } catch (error) {
@@ -161,12 +161,12 @@ export const createProductEnquiry = async (req, res) => {
     });
 
     // Meta WhatsApp Notifications
-    const adminPhone = process.env.ADMIN_WHATSAPP_NUMBER;
-    const adminMsg = `📦 *New Product Enquiry*\n\n🛍️ *Product:* ${productTitle}\n👤 *Client:* ${name}\n📞 *Phone:* ${phone}\n📝 *Message:* ${message}`;
-    await sendMetaWhatsApp(adminPhone, adminMsg);
+    // const adminPhone = process.env.ADMIN_WHATSAPP_NUMBER;
+    // const adminMsg = `📦 *New Product Enquiry*\n\n🛍️ *Product:* ${productTitle}\n👤 *Client:* ${name}\n📞 *Phone:* ${phone}\n📝 *Message:* ${message}`;
+    // await sendMetaWhatsApp(adminPhone, adminMsg);
 
-    const userMsg = `Hello *${name}*! 👋\n\nThank you for your interest in *${productTitle}* at *Silicon Meditech*. Our team will contact you soon!`;
-    await sendMetaWhatsApp(formattedUserPhone, userMsg);
+    // const userMsg = `Hello *${name}*! 👋\n\nThank you for your interest in *${productTitle}* at *Silicon Meditech*. Our team will contact you soon!`;
+    // await sendMetaWhatsApp(formattedUserPhone, userMsg);
 
     return res.status(201).json({ success: true, message: "Product enquiry submitted successfully", data: newEnquiry });
   } catch (error) {
@@ -201,8 +201,8 @@ export const sendResponse = async (req, res) => {
       `,
     });
 
-    const userMsg = `Hello *${contact.name}*! 👋\n\n*${responseMessage}*`;
-    await sendMetaWhatsApp(contact.phone, userMsg);
+    // const userMsg = `Hello *${contact.name}*! 👋\n\n*${responseMessage}*`;
+    // await sendMetaWhatsApp(contact.phone, userMsg);
 
     return res.status(200).json({ success: true, message: "Response sent successfully via Email" });
   } catch (error) {

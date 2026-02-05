@@ -1,6 +1,6 @@
 import express from "express";
 import multer from "multer";
-
+import { Demo } from "../models/demo.model.js";
 import {
   updateColorBySection,
   createProductStep1,
@@ -34,6 +34,30 @@ const storage = multer.memoryStorage();
 const upload = multer({ storage });
 
 /* ---------------- CREATE ---------------- */
+router.get("/products-model-summary", async (req, res) => {
+  try {
+    const data = await Demo.aggregate([
+      {
+        $project: {
+          productTitle: 1,
+          models: "$productModels.modelName",
+          totalModels: { $size: "$productModels" }
+        }
+      }
+    ]);
+
+    res.status(200).json({
+      totalProducts: data.length,
+      products: data
+    });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+});
+
+
+
+
 
 router.post(
   "/products",
