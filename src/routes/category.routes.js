@@ -14,7 +14,7 @@ import {
 const router = express.Router();
 
 // Create
-router.post("/", createCategory);
+router.post("/create", createCategory);
 
 // Read
 router.get("/", getAllCategories);

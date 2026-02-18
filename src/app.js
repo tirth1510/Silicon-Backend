@@ -13,16 +13,20 @@ dotenv.config();
 
 const app = express();
 app.set("trust proxy", 1);
-// Middleware
 app.use(express.json());
-app.use(express.urlencoded({ extended: true })); // important for form-data
+app.use(express.urlencoded({ extended: true })); 
 app.use(
   cors({
-    origin: ["http://localhost:3000","http://localhost:3001","https://from-fill-u8c7.vercel.app","https://silicon-frontend-5d1n.vercel.app"],
+    origin: [
+      "http://localhost:3000",
+      "https://silicon-frontend-5d1n.vercel.app",
+      "https://www.siliconmeditech.in",
+      "https://siliconmeditech.in"
+    ],
     credentials: true,
     methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
     allowedHeaders: ["Content-Type", "Authorization"],
-  })
+  }),
 );
 
 app.use(cookieParser());
@@ -35,5 +39,6 @@ app.use("/api/contact", contactRoutes);
 app.use("/api/accessorize", accessorizeRoutes);
 app.use("/api/categories", categoryRoutes);
 app.use("/api/auth", userRoutes);
-app.use("/api/temp", tempRoutes); 
+app.use("/api/temp", tempRoutes);
+
 export default app;

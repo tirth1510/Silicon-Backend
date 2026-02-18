@@ -143,8 +143,8 @@ router.put(
   "/products/color/:productId/models/:modelId/colors/:colorId/:section",
    upload.fields([
   { name: "mainImage", maxCount: 1 },
-  { name: "productImages", maxCount: 10 },
-  { name: "galleryImages", maxCount: 10 }
+  { name: "productImages", maxCount: 1 },
+  { name: "galleryImages", maxCount: 1 }
 ]),
   updateColorBySection
 );

@@ -13,7 +13,7 @@ router.get("/all", getAllContacts);
 router.post("/send-response", sendResponse);
 
 router.post("/product-enquiry", createProductEnquiry);
-router.get("/product-enq  uiries", getProductEnquiries);
+router.get("/product-enquiries", getProductEnquiries);
 
 
 export default router;
