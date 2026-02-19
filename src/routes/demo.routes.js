@@ -18,6 +18,9 @@ import {
   getProductByModelIdController,
   getProductsByScheme,
   deleteModelController,
+  updateValuableStatus,
+  deleteValuableStatus,
+  getValuableProducts,
 } from "../controllers/demo.controller.js";
 
 import {
@@ -30,6 +33,7 @@ import {
 const router = express.Router();
 
 /* ---------------- Multer ---------------- */
+
 const storage = multer.memoryStorage();
 const upload = multer({ storage });
 
@@ -149,7 +153,12 @@ router.put(
   updateColorBySection
 );
 
-
+// PUT: http://localhost:5000/api/valuable/:productId/:modelId
+router.put("/valuable/:productId/:modelId", updateValuableStatus);
+// GET: http://localhost:5000/api/products/valuable
+router.get("/valuable", getValuableProducts);
+// DELETE: http://localhost:5000/api/valuable/:productId/:modelId
+router.delete("/valuable/:productId/:modelId", deleteValuableStatus);
 router.delete("/products/delete/:productId/models/:modelId", deleteModelController);
 
 export default router;

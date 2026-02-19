@@ -9,6 +9,7 @@ import {
   updateCategoryProductCountService,
   updateAllCategoryCountsService,
 } from "../services/category.service.js";
+import { Readable } from "stream";
 
 export const createCategory = async (req, res) => {
   try {
@@ -83,23 +84,70 @@ export const getCategoryBySlug = async (req, res) => {
   }
 };
 
+import { v2 as cloudinary } from "cloudinary";
+
+// --- Cloudinary Config ---
+cloudinary.config({
+  cloud_name: process.env.CLOUD_NAME,
+  api_key: process.env.CLOUD_API_KEY,
+  api_secret: process.env.CLOUD_API_SECRET,
+});
+
+const uploadToCloudinary = (buffer) => {
+  return new Promise((resolve, reject) => {
+    const uploadStream = cloudinary.uploader.upload_stream(
+      { folder: "categories" },
+      (error, result) => {
+        if (error) return reject(error);
+        resolve(result);
+      }
+    );
+    Readable.from(buffer).pipe(uploadStream);
+  });
+};
+
+// --- Controller Function ---
 export const updateCategory = async (req, res) => {
   try {
-    const { categoryId } = req.params;
-    const category = await updateCategoryService(categoryId, req.body);
+    // Handle both :id (PATCH) and :categoryId (PUT)
+    const id = req.params.id || req.params.categoryId;
+    let updateBody = { ...req.body };
+
+    // Agar file upload hui hai, toh uska path 'categoryImage' field mein daal dein
+    if (req.file) {
+      const result = await uploadToCloudinary(req.file.buffer);
+      updateBody.categoryImage = result.secure_url;
+    }
+
+    // Aapka service function call
+    const result = await updateCategoryService(id, updateBody);
 
     res.status(200).json({
       success: true,
       message: "Category updated successfully",
-      data: category,
+      data: result
     });
   } catch (error) {
-    res.status(400).json({
-      success: false,
-      message: error.message,
-    });
+    res.status(400).json({ success: false, message: error.message });
   }
 };
+// export const updateCategory = async (req, res) => {
+//   try {
+//     const { categoryId } = req.params;
+//     const category = await updateCategoryService(categoryId, req.body);
+
+//     res.status(200).json({
+//       success: true,
+//       message: "Category updated successfully",
+//       data: category,
+//     });
+//   } catch (error) {
+//     res.status(400).json({
+//       success: false,
+//       message: error.message,
+//     });
+//   }
+// };
 
 export const deleteCategory = async (req, res) => {
   try {
@@ -170,4 +218,3 @@ export const updateAllCategoryCounts = async (req, res) => {
     });
   }
 };
-

@@ -682,3 +682,98 @@ export const deleteModelController = async (req, res) => {
     return res.status(500).json({ success: false, message: error.message });
   }
 };
+
+
+// Controller: Set valuableProduct to true/false
+export const updateValuableStatus = async (req, res) => {
+  try {
+    const { productId, modelId } = req.params;
+    const { isValuable } = req.body; // Expecting boolean true or false
+
+    const updatedProduct = await Demo.findOneAndUpdate(
+      { 
+        _id: productId, 
+        "productModels._id": modelId 
+      },
+      {
+        $set: {
+          // Specific path to valuableProduct
+          "productModels.$.productModelDetails.scheme.valuableProduct": isValuable
+        }
+      },
+      { new: true }
+    );
+
+    if (!updatedProduct) {
+      return res.status(404).json({ message: "Product or Model not found" });
+    }
+
+    res.status(200).json({ 
+      message: `Valuable status updated to ${isValuable}`, 
+      valuableStatus: isValuable 
+    });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
+export const getValuableProducts = async (req, res) => {
+  try {
+    const valuableItems = await Demo.aggregate([
+      // 1. Array ko kholo taaki har model ek alag document ban jaye
+      { $unwind: "$productModels" },
+      
+      // 2. Filter karein jahan valuableProduct true ho
+      { 
+        $match: { 
+          "productModels.productModelDetails.scheme.valuableProduct": true 
+        } 
+      },
+      
+      // 3. Data ko format karein (optional)
+      {
+        $project: {
+          _id: 0,
+          productId: "$_id",
+          productTitle: 1,
+          productCategory: 1,
+          modelId: "$productModels._id",
+          modelName: "$productModels.modelName",
+          status: "$productModels.status",
+          details: "$productModels.productModelDetails"
+        }
+      }
+    ]);
+
+    res.status(200).json(valuableItems);
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+// Controller: Reset valuableProduct to false
+export const deleteValuableStatus = async (req, res) => {
+  try {
+    const { productId, modelId } = req.params;
+
+    const updatedProduct = await Demo.findOneAndUpdate(
+      { 
+        _id: productId, 
+        "productModels._id": modelId 
+      },
+      {
+        $set: {
+          "productModels.$.productModelDetails.scheme.valuableProduct": false
+        }
+      },
+      { new: true }
+    );
+
+    if (!updatedProduct) {
+      return res.status(404).json({ message: "Product or Model not found" });
+    }
+
+    res.status(200).json({ message: "Valuable status removed (set to false)" });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
