@@ -5,7 +5,6 @@ export const createProductService = async (data, files) => {
   const {
     productCategory,
     productTitle,
-    description,
     price,
     productSpecifications,
     discount,
@@ -36,7 +35,6 @@ export const createProductService = async (data, files) => {
   return Accessorize.create({
     productCategory,
     productTitle,
-    description,
     priceDetails: {
       price: Number(price),
       discount: Number(discount) || 0,

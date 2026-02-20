@@ -204,7 +204,7 @@ export const addProductModelDetails = async (req, res) => {
 export const addColorToModel = async (req, res) => {
   try {
     const { productId, modelId } = req.params;
-    const { colorName, stock, colorPrice } = req.body;
+    const { colorName, stock } = req.body;
 
     if (!colorName)
       return res
@@ -248,20 +248,13 @@ export const addColorToModel = async (req, res) => {
       }
     }
 
-    let parsedPrice = [];
-    try {
-      parsedPrice =
-        typeof colorPrice === "string" ? JSON.parse(colorPrice) : colorPrice;
-    } catch (e) {
-      parsedPrice = [];
-    }
+    
 
     const colorObj = {
       colorName,
       imageUrl: mainResult.secure_url,
       productImageUrl: productImages,
       productGallery: galleryImages,
-      colorPrice: parsedPrice,
       stock: stock ? parseInt(stock) : 0,
     };
 

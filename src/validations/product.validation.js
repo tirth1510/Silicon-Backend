@@ -1,12 +1,12 @@
 import Joi from "joi";
 export const validateCreateProductStep1 = (req, res, next) => {
-  const { productCategory, productTitle, description, modelName } = req.body;
+  const { productCategory, productTitle, modelName } = req.body;
 
-  if (!productCategory || !productTitle || !description || !modelName) {
+  if (!productCategory || !productTitle  || !modelName) {
     return res.status(400).json({
       success: false,
       message:
-        "productCategory, productTitle, description and modelName are required",
+        "productCategory, productTitle and modelName are required",
     });
   }
 

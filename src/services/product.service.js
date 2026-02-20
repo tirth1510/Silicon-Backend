@@ -5,13 +5,11 @@ import { Demo } from "../models/demo.model.js";
 export const createProductStep1Service = async ({
   productCategory,
   productTitle,
-  description,
   modelName,
 }) => {
   const product = await Demo.create({
     productCategory,
     productTitle,
-    description,
     productModels: [
       {
         modelName,
@@ -314,8 +312,6 @@ export const updateProductService = async (productId, payload) => {
     updateData.productCategory = payload.productCategory;
   if (payload.productTitle !== undefined)
     updateData.productTitle = payload.productTitle;
-  if (payload.description !== undefined)
-    updateData.description = payload.description;
 
   if (Object.keys(updateData).length === 0) {
     throw new Error("No fields provided for update");
@@ -335,7 +331,7 @@ export const updateProductService = async (productId, payload) => {
     _id: updatedProduct._id,
     productCategory: updatedProduct.productCategory,
     productTitle: updatedProduct.productTitle,
-    description: updatedProduct.description,
+    
   };
 };
 
