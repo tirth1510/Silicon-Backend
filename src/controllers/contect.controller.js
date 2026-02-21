@@ -58,7 +58,7 @@ export const createContact = async (req, res) => {
       </div>`;
 
     // Admin Notification Email
-    sendEmail({
+    await sendEmail({
       to: process.env.SMTP_USER,
       subject: `New Inquiry from ${name}`,
       html: `
@@ -93,7 +93,7 @@ export const createContact = async (req, res) => {
     }).catch(err => console.error("Admin contact email failed:", err));
 
     // User Acknowledgement Email
-    sendEmail({
+    await sendEmail({
       to: email,
       subject: "We received your message",
       html: `
@@ -152,7 +152,7 @@ export const createProductEnquiry = async (req, res) => {
       </div>`;
 
     // Admin Notification Email
-    sendEmail({
+    await sendEmail({
       to: process.env.SMTP_USER,
       subject: `Product Enquiry: ${productTitle} - ${modelName}`,
       html: `
@@ -277,7 +277,7 @@ export const createAccessorizeEnquiry = async (req, res) => {
       </div>`;
 
     // Admin Notification Email
-    sendEmail({
+  await  sendEmail({
       to: process.env.SMTP_USER,
       subject: `Accessory Enquiry: ${productTitle}`,
       html: `
@@ -411,7 +411,7 @@ export const sendResponse = async (req, res) => {
         <p style="margin: 0;">Visit us at <a href="https://www.siliconmeditech.in" style="color: #043bbc; text-decoration: none; font-weight: 600;">www.siliconmeditech.in</a></p>
       </div>`;
 
-    sendEmail({
+    await sendEmail({
       to: contact.email,
       subject: emailSubject,
       html: `
@@ -441,6 +441,7 @@ export const sendResponse = async (req, res) => {
         </html>
       `,
     }).catch(err => console.error("Response email failed:", err));
+    
 
     return res.status(200).json({ success: true, message: "Response sent successfully via Email" });
   } catch (error) {
