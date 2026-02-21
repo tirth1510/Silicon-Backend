@@ -13,7 +13,7 @@ const contactSchema = new mongoose.Schema(
     messageTitle: String,
     message: { type: String, required: true },
     // New fields for Product Enquiry
-    enquiryType: { type: String, default: "General" }, // "General" or "Product"
+    enquiryType: { type: String, default: "Enquiry" }, // "General" or "Product"
     productTitle: String,
     modelName: String,
     productImageUrl: String,
