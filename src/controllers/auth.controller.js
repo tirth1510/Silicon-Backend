@@ -44,7 +44,7 @@ export const register = async (req, res) => {
 
     await createdUser.save();
 
-    // 5. Fire-and-forget Email (Don't let email failure crash the response)
+    // 5. Send Email (Awaited to ensure delivery in serverless environments)
     await sendEmail({
       to: email,
       subject: "Welcome!",

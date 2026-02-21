@@ -58,7 +58,7 @@ export const createContact = async (req, res) => {
       </div>`;
 
     // Admin Notification Email
-    await sendEmail({
+    const adminEmailPromise = sendEmail({
       to: process.env.SMTP_USER,
       subject: `New Inquiry from ${name}`,
       html: `
@@ -93,7 +93,7 @@ export const createContact = async (req, res) => {
     }).catch(err => console.error("Admin contact email failed:", err));
 
     // User Acknowledgement Email
-    await sendEmail({
+    const userEmailPromise = sendEmail({
       to: email,
       subject: "We received your message",
       html: `
@@ -119,6 +119,8 @@ export const createContact = async (req, res) => {
         </html>
       `,
     }).catch(err => console.error("User contact email failed:", err));
+
+    await Promise.all([adminEmailPromise, userEmailPromise]);
 
     return res.status(201).json({ success: true, message: "Contact saved and notifications sent via Email", data: newContact });
   } catch (error) {
@@ -152,7 +154,7 @@ export const createProductEnquiry = async (req, res) => {
       </div>`;
 
     // Admin Notification Email
-    await sendEmail({
+    const adminEmailPromise = sendEmail({
       to: process.env.SMTP_USER,
       subject: `Product Enquiry: ${productTitle} - ${modelName}`,
       html: `
@@ -211,7 +213,7 @@ export const createProductEnquiry = async (req, res) => {
     }).catch(err => console.error("Admin product enquiry email failed:", err));
 
     // User Acknowledgement Email
-    await sendEmail({
+    const userEmailPromise = sendEmail({
       to: email,
       subject: `Enquiry Received: ${productTitle} - ${modelName}`,
       html: `
@@ -245,6 +247,8 @@ export const createProductEnquiry = async (req, res) => {
       `,
     }).catch(err => console.error("User product enquiry email failed:", err));
 
+    await Promise.all([adminEmailPromise, userEmailPromise]);
+
     return res.status(201).json({ success: true, message: "Product enquiry submitted successfully", data: newEnquiry });
   } catch (error) {
     console.error("PRODUCT ENQUIRY ERROR:", error);
@@ -277,7 +281,7 @@ export const createAccessorizeEnquiry = async (req, res) => {
       </div>`;
 
     // Admin Notification Email
-    await sendEmail({
+    const adminEmailPromise = sendEmail({
       to: process.env.SMTP_USER,
       subject: `Accessory Enquiry: ${productTitle}`,
       html: `
@@ -335,7 +339,7 @@ export const createAccessorizeEnquiry = async (req, res) => {
     }).catch(err => console.error("Admin accessory enquiry email failed:", err));
 
     // User Acknowledgement Email
-    await sendEmail({
+    const userEmailPromise = sendEmail({
       to: email,
       subject: `Enquiry Received: ${productTitle}`,
       html: `
@@ -368,6 +372,8 @@ export const createAccessorizeEnquiry = async (req, res) => {
         </html>
       `,
     }).catch(err => console.error("User accessory enquiry email failed:", err));
+
+    await Promise.all([adminEmailPromise, userEmailPromise]);
 
     return res.status(201).json({ success: true, message: "Accessory enquiry submitted successfully", data: newEnquiry });
   } catch (error) {
