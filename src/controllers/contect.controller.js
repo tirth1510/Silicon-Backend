@@ -211,7 +211,7 @@ export const createProductEnquiry = async (req, res) => {
     }).catch(err => console.error("Admin product enquiry email failed:", err));
 
     // User Acknowledgement Email
-    sendEmail({
+    await sendEmail({
       to: email,
       subject: `Enquiry Received: ${productTitle} - ${modelName}`,
       html: `
@@ -277,7 +277,7 @@ export const createAccessorizeEnquiry = async (req, res) => {
       </div>`;
 
     // Admin Notification Email
-  await  sendEmail({
+    await sendEmail({
       to: process.env.SMTP_USER,
       subject: `Accessory Enquiry: ${productTitle}`,
       html: `
@@ -335,7 +335,7 @@ export const createAccessorizeEnquiry = async (req, res) => {
     }).catch(err => console.error("Admin accessory enquiry email failed:", err));
 
     // User Acknowledgement Email
-    sendEmail({
+    await sendEmail({
       to: email,
       subject: `Enquiry Received: ${productTitle}`,
       html: `

@@ -45,7 +45,7 @@ export const register = async (req, res) => {
     await createdUser.save();
 
     // 5. Fire-and-forget Email (Don't let email failure crash the response)
-    sendEmail({
+    await sendEmail({
       to: email,
       subject: "Welcome!",
       html: `<h2>Hello ${username},</h2><p>Account created as ${role}.</p>`,
@@ -221,7 +221,7 @@ export const resetPassword = async (req, res) => {
     user.tokenExpiresAt = null;
     await user.save();
 
-    sendEmail({
+    await sendEmail({
       to: email,
       subject: "Password Reset Successful",
       html: `<h2>Hello ${user.username},</h2>
