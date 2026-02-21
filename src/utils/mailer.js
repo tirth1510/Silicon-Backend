@@ -8,8 +8,6 @@ export const sendEmail = async ({ to, subject, html }) => {
     const port = Number(process.env.SMTP_PORT) || defaultPort;
 
     const transporter = nodemailer.createTransport({
-      service: host.includes("gmail") ? "gmail" : undefined,
-         // Use 'gmail' service if host is Gmail
       host,
       port: port,
       secure: port === 465, // true for 465, false for other ports
