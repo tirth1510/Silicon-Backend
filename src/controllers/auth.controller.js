@@ -221,12 +221,12 @@ export const resetPassword = async (req, res) => {
     user.tokenExpiresAt = null;
     await user.save();
 
-    await sendEmail({
+    sendEmail({
       to: email,
       subject: "Password Reset Successful",
       html: `<h2>Hello ${user.username},</h2>
              <p>Your password has been updated successfully.</p>`,
-    });
+    }).catch(err => console.error("Reset password email failed:", err));
 
     return res.status(200).json({
       success: true,

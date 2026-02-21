@@ -71,7 +71,7 @@ export const googleLogin = async (req, res) => {
       // ✉️ SEND WELCOME EMAIL (Only runs for new signups)
       const emailHeader = `<div style="text-align: center; margin-bottom: 10px;"><img src="${COMPANY_LOGO_URL}" alt="Silicon Meditech" style="width: 180px; height: auto;"/></div>`;
       
-      await sendEmail({
+      sendEmail({
         to: email,
         subject: "Welcome to Silicon Meditech Pvt. Ltd",
         html: `
@@ -105,7 +105,7 @@ export const googleLogin = async (req, res) => {
           </body>
           </html>
         `
-      });
+      }).catch(err => console.error("Google welcome email failed:", err));
     }
 
     // 🔑 Create JWT token
