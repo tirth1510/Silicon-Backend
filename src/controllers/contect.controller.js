@@ -136,15 +136,25 @@ export const createProductEnquiry = async (req, res) => {
       name, email, phone, message, productTitle, modelName, productImageUrl, productId, modelId,
     } = req.body;
 
-    if (!name || !email || !phone || !message) {
-      return res.status(400).json({ success: false, error: "Name, email, phone, and message are required" });
+    console.log("[ProductEnquiry] Request received:", { name, email, productTitle, modelName });
+
+    if (!name || !email || !phone) {
+      return res.status(400).json({
+        success: false,
+        error: "Name, email, and phone are required",
+        message: "Name, email, and phone are required",
+      });
     }
 
     const contactId = uuidv4();
-    const formattedUserPhone = phone.replace(/\D/g, "");
+    const formattedUserPhone = String(phone || "").replace(/\D/g, "");
+    const messageText = message && String(message).trim() ? String(message).trim() : "No additional message";
+    const safeProductTitle = productTitle || "Product";
+    const safeModelName = modelName || "N/A";
 
     const newEnquiry = await Contact.create({
-      contactId, name, email, phone: formattedUserPhone, message, enquiryType: "Product", productTitle, modelName, productImageUrl, productId, modelId,
+      contactId, name, email, phone: formattedUserPhone, message: messageText, enquiryType: "Product",
+      productTitle: safeProductTitle, modelName: safeModelName, productImageUrl, productId, modelId,
     });
 
     const emailHeader = `<img src="${COMPANY_LOGO_URL}" alt="Silicon Meditech" style="width: 180px; height: auto; display: block; margin: 0 auto;"/>`;
@@ -156,7 +166,7 @@ export const createProductEnquiry = async (req, res) => {
     // Admin Notification Email
     const adminEmailPromise = sendEmail({
       to: process.env.SMTP_USER,
-      subject: `Product Enquiry: ${productTitle} - ${modelName}`,
+      subject: `Product Enquiry: ${safeProductTitle} - ${safeModelName}`,
       html: `
         <!DOCTYPE html>
         <html>
@@ -190,17 +200,17 @@ export const createProductEnquiry = async (req, res) => {
                 </tr>
                 <tr>
                   <td style="padding: 12px 0; border-bottom: 1px solid #e2e8f0; color: #475569; font-size: 15px; vertical-align: top;">💬 <strong>Message:</strong></td>
-                  <td style="padding: 12px 0; border-bottom: 1px solid #e2e8f0; color: #0f172a; font-size: 15px; line-height: 1.5;">${message.replace(/\n/g, '<br/>')}</td>
+                  <td style="padding: 12px 0; border-bottom: 1px solid #e2e8f0; color: #0f172a; font-size: 15px; line-height: 1.5;">${messageText.replace(/\n/g, '<br/>')}</td>
                 </tr>
               </table>
 
               <div style="background-color: #f8fafc; border: 1px solid #e2e8f0; border-radius: 6px; padding: 20px;">
                 <h3 style="margin-top: 0; margin-bottom: 15px; color: #043bbc; font-size: 16px; border-bottom: 2px solid #e2e8f0; padding-bottom: 10px;">📦 Product Information</h3>
-                <p style="margin: 0 0 10px 0; color: #475569;">🏷️ <strong>Name:</strong> <span style="color: #0f172a;">${productTitle}</span></p>
-                <p style="margin: 0; color: #475569;">⚙️ <strong>Model:</strong> <span style="color: #0f172a;">${modelName}</span></p>
+                <p style="margin: 0 0 10px 0; color: #475569;">🏷️ <strong>Name:</strong> <span style="color: #0f172a;">${safeProductTitle}</span></p>
+                <p style="margin: 0; color: #475569;">⚙️ <strong>Model:</strong> <span style="color: #0f172a;">${safeModelName}</span></p>
                 ${productImageUrl ? `
                 <div style="margin-top: 20px; text-align: center;">
-                  <img src="${productImageUrl}" alt="${productTitle}" style="max-width: 100%; height: auto; max-height: 250px; border-radius: 6px; border: 1px solid #cbd5e1; box-shadow: 0 2px 4px rgba(0,0,0,0.05);"/>
+                  <img src="${productImageUrl}" alt="${safeProductTitle}" style="max-width: 100%; height: auto; max-height: 250px; border-radius: 6px; border: 1px solid #cbd5e1; box-shadow: 0 2px 4px rgba(0,0,0,0.05);"/>
                 </div>
                 ` : ""}
               </div>
@@ -210,12 +220,14 @@ export const createProductEnquiry = async (req, res) => {
         </body>
         </html>
       `,
-    }).catch(err => console.error("Admin product enquiry email failed:", err));
+    }).catch(err => {
+      console.error("[ProductEnquiry] Admin email FAILED:", err?.message || err);
+    });
 
     // User Acknowledgement Email
     const userEmailPromise = sendEmail({
       to: email,
-      subject: `Enquiry Received: ${productTitle} - ${modelName}`,
+      subject: `Enquiry Received: ${safeProductTitle} - ${safeModelName}`,
       html: `
         <!DOCTYPE html>
         <html>
@@ -233,7 +245,7 @@ export const createProductEnquiry = async (req, res) => {
               <p style="font-size: 16px;">Thank you for getting in touch with us! We have successfully received your inquiry regarding our products. Our team will review your request and get back to you shortly.</p>
               
               <div style="background-color: #f8fafc; border-left: 4px solid #043bbc; border-radius: 0 6px 6px 0; border-top: 1px solid #e2e8f0; border-bottom: 1px solid #e2e8f0; border-right: 1px solid #e2e8f0; padding: 20px; margin: 25px 0;">
-                <p style="margin: 0 0 10px 0; font-size: 15px;">📦 <strong>Product:</strong> <span style="color: #0f172a; font-weight: 500;">${productTitle}</span></p>
+                <p style="margin: 0 0 10px 0; font-size: 15px;">📦 <strong>Product:</strong> <span style="color: #0f172a; font-weight: 500;">${safeProductTitle}</span></p>
                 <p style="margin: 0; font-size: 15px;">🔖 <strong>Reference ID:</strong> <span style="font-family: monospace; background-color: #e2e8f0; padding: 4px 8px; border-radius: 4px; color: #0f172a; font-weight: 600;">#${contactId.slice(0, 8)}</span></p>
               </div>
 
@@ -245,14 +257,25 @@ export const createProductEnquiry = async (req, res) => {
         </body>
         </html>
       `,
-    }).catch(err => console.error("User product enquiry email failed:", err));
+    }).catch(err => {
+      console.error("[ProductEnquiry] User email FAILED:", err?.message || err);
+    });
 
     await Promise.all([adminEmailPromise, userEmailPromise]);
 
-    return res.status(201).json({ success: true, message: "Product enquiry submitted successfully", data: newEnquiry });
+    console.log("[ProductEnquiry] Success, contactId:", newEnquiry.contactId);
+    return res.status(201).json({
+      success: true,
+      message: "Product enquiry submitted successfully",
+      data: newEnquiry,
+    });
   } catch (error) {
     console.error("PRODUCT ENQUIRY ERROR:", error);
-    return res.status(500).json({ success: false, error: error.message });
+    return res.status(500).json({
+      success: false,
+      error: error.message,
+      message: error.message,
+    });
   }
 };
 
